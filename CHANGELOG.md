@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## v1.3.0 (2026-09-10)
+
+- **「確認中」暫回追蹤**:回「確認中/請稍等/請稍候」或按 pending emoji(config.style.pending_emojis,如 :loading:)不再視為已回——待辦標 ⏳ 掛著,超過 pending_timeout_hours(預設 4h)無實質回覆 → bot 提醒;下班結算列所有未結暫回項。config.style 新增 pending_emojis / pending_patterns / pending_timeout_hours
+
 ## v1.2.0 (2026-09-10)
 
 - **行程撞期偵測**:開工包比對今日行程時間重疊,標「⚠️ 撞期:A × B」;中途新增行程撞到既有行程,提醒訊息同標

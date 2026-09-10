@@ -19,7 +19,7 @@ description: Slack 待回覆秘書(通用版)。掃描 DM + mentions + watchlist
 
 同目錄 `state.json`。核心欄位:
 
-- `open[]`:待辦項 `{num, id: "<channel_id>:<message_ts>", who, where, summary, priority, first_seen, reminded, link}`。**`num` 為永久編號**(從 `next_num` 遞增,永不重用),銷帳/回覆指令都用它
+- `open[]`:待辦項 `{num, id: "<channel_id>:<message_ts>", who, where, summary, priority, first_seen, reminded, link, pending_since(選填,見流程 2 例外)}`。**`num` 為永久編號**(從 `next_num` 遞增,永不重用),銷帳/回覆指令都用它
 - `dismissed[]`(已銷 id)、`dismissed_patterns[]`(例行訊息文字黑名單,substring 比對)、`notes[]`(備忘)
 - `mode_scan_interval_min` 執行期覆寫值、`cron_jobs`(見各節)
 - `session_first_scan_done`:新 session 由「上班」重設為 false
@@ -47,7 +47,7 @@ ack emoji 清單讀 `config.style.ack_emojis`;muted 清單讀 `config.muted_chan
 3. **watchlist(有新訊息就報,不限點名)**:逐一 `slack_read_channel`(`oldest=<last_run>`),頻道清單 = `config.watchlist[]`(每項 `{id, name, note}`,`note` 是分級參考註記)。使用者自己發的略過;同話題連續訊息合併成一項
 4. **全 workspace @here/@channel**:search query `here`(**不加引號**,加引號搜不到),`only_my_channels=true`、`after`、`sort=timestamp`,只留原文含 `<!here>`/`<!channel>` 的;使用者自己發的略過
 5. **Bot DM 指令通道**(bot 有設定才跑):`slack_read_channel`(`config.bot.dm_channel_id`)。**使用者在裡面發的訊息 = 秘書指令**(「銷 N」「記一下」「看全部」「回 N」等口令與終端相同),執行後 bot 回一句確認(「✅ #12 已銷」)。bot 自己的訊息略過;非指令留言存進對應 item 備註或回覆收到
-6. **React 銷帳**:對 `config.style.ack_emojis` 每顆搜 `to:me hasmy::<emoji>:`(`after`=最舊 open 的 first_seen),命中 = 使用者已處理,自動銷帳。帶膚色要搜 `:+1::skin-tone-N:` 完整寫法
+6. **React 銷帳**:對 `config.style.ack_emojis` 每顆搜 `to:me hasmy::<emoji>:`(`after`=最舊 open 的 first_seen),命中 = 使用者已處理,自動銷帳。帶膚色要搜 `:+1::skin-tone-N:` 完整寫法。**pending emoji 不銷帳**:對 `config.style.pending_emojis` 同法逐顆搜 `hasmy:`,命中 = 使用者回了「確認中」的 react → 不銷帳,item 標 `pending_since`(見第 2 節例外)
 
 ### 1.5 承諾偵測(掃使用者自己的訊息)
 
@@ -60,6 +60,8 @@ ack emoji 清單讀 `config.style.ack_emojis`;muted 清單讀 `config.muted_chan
 ### 2. 判斷待回覆
 
 依對話(DM/群組 DM/channel+thread)分組。最後一則候選之後使用者在**同一對話/thread**有發言 → 視為已回,整組剔除;歸屬不明才用 `slack_read_thread` 補查,能省則省。
+
+**例外——「確認中」暫回不算已回**:使用者那則發言只是暫緩回應(文字命中 `config.style.pending_patterns`,或整則只有 pending emoji)→ 不剔除,item 標 `pending_since=<該發言 ts>` 保留(清單上顯示「⏳ 你回了確認中」),等實質回覆才自動銷;使用者仍可手動「銷 N」。已標 pending 的 item 再次命中暫回 → 只更新 pending_since,不重複提醒。
 
 再剔除:**`config.muted_channels` 名單內的對話一律完全無視**(不整理、不進清單、不自動回覆——比 dismissed 更徹底,整個對話靜音)、`dismissed` 內的 id、命中 `dismissed_patterns` 的、純閒聊噪音(貼圖/梗圖/哈拉且無問句無點名無工作字眼)。口令「這個群不用管/無視 X」→ 查出頻道 id 加入 `config.muted_channels`(記 id+成員描述);「取消無視 X」→ 移除。**例行排程 @here**(每天同文案的機器人提醒)摺疊成清單底部一行「例行提醒 ×N」;使用者說「例行的不用列」→ 文案加入 `dismissed_patterns`。
 
@@ -178,6 +180,7 @@ cron 是 session 內記憶體,session 重開即消失,靠「上班」+本核對�
 
 - **待收項**(對方欠你)超過 **2 天**無進展 → bot 提醒「該催了」+套 `chase` 範本擬好的催稿話術,催不催使用者決定
 - **承諾項**(你欠別人)含時限(「下週」「下個月」)→ 接近時限 3 天內自動升 P1
+- **暫回項**(`pending_since` 存在)超過 `config.style.pending_timeout_hours`(預設 4)小時仍無實質回覆 → bot 提醒「⏳ 你回了確認中還沒給後續:<摘要>」(每項只提醒一次,item 標 `pending_reminded: true`);下班結算固定列出所有未結暫回項
 
 ## 「回 N」擬稿與回覆範本
 
