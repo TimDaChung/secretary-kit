@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## v1.1.0 (2026-09-10)
+
+- **掃描改派 subagent 執行**(流程新增第 0 節):Slack 搜尋結果不再進主 session context,值班一整天 context 保持輕量、不觸發壓縮,token 用量明顯下降。主 session 只負責排程核對、讀 agent 摘要、補排 cron 與使用者口令
+- 口令與掃描的寫檔衝突規則:agent 掃描中收到口令,等該輪寫完 state.json 再執行(單一寫者)
+
 ## v1.0.0 (2026-09-10)
 
 首發:

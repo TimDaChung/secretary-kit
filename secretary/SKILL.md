@@ -29,6 +29,17 @@ ack emoji 清單讀 `config.style.ack_emojis`;muted 清單讀 `config.muted_chan
 
 ## 流程
 
+### 0. 掃描一律派 subagent(省 context 鐵則)
+
+每輪掃描(含開工包、下班結算)主 session **不自己跑下面 1~5 節**,改派一個 general-purpose subagent 執行,prompt 自包含,要點:
+
+> 讀 `~/.claude/skills/secretary/SKILL.md` 的「流程 1~5」「優先級」「每日節奏」各節與同目錄 `config.json`、`state.json`,執行完整掃描(含 bot DM 發送;開工包/結算輪含該節加碼項),結果寫回 `state.json`,回傳兩段:(a) 新增/變化項摘要 ≤15 行(編號+一句話) (b) 需主 session 排 cron 的事項清單(新會議提醒、模式切換、行程補提醒)。
+
+主 session 每輪只做:**排程核對(cron 只能在主 session 建/刪)→ 派 agent → 讀回摘要 → 補排 cron → 顯示摘要給使用者**。Slack 搜尋結果與頻道內容**絕不進主 session context**——這是本設計的目的,使 session 全天保持輕量、不觸發壓縮。
+
+- 使用者口令(銷/回/記一下/看備忘等)仍由主 session 直接處理(只動 `state.json`,很輕);agent 掃描中收到口令,等該輪寫檔完成再執行,維持單一寫者
+- agent 連續失敗 2 次(MCP 斷線等)→ 該輪退回主 session 自己掃,下輪恢復派 agent
+
 ### 1. 收集候選(4 路,不逐頻道讀;watchlist 除外)
 
 1. **DM + mentions**:`slack_search_public_and_private` query `to:me`,`after=<last_run>`、`sort=timestamp`、`include_context=false`、`response_format=detailed`(要 permalink)。翻頁到取完或最多 3 頁;噪音大可拆 `channel_types=im` 與 `public_channel,private_channel` 兩路
