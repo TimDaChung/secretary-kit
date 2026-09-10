@@ -78,5 +78,7 @@
     "_comment": "狀態自動回覆開關,兩者獨立。false = 只切狀態不自動回覆。",
     "meeting": true,
     "vacation": true
-  }
+  },
+  "disabled_integrations": [],
+  "_comment_disabled_integrations": "結算整合健檢不再提醒的項目(口令「X 不用了」自動寫入),如 [\"gmail\",\"calendar\"]"
 }
