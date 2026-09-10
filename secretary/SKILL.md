@@ -173,12 +173,11 @@ cron 是 session 內記憶體,session 重開即消失,靠「上班」+本核對�
 
 1. **晨間開工包**(`config.schedule.morning_time`):bot 完整清單+隔夜變化+今日行程。**今日行程 = notes 今天的 ∪ Google 日曆今天的 events**(`list_events`,含週期事件如每週固定會議);會前提醒與切狀態 cron 以聯集排,重複的只排一次。**撞期偵測**:行程聯集內時間重疊的,行程段頂部標「⚠️ 撞期:<場次A> × <場次B>」,取捨由使用者決定,秘書不代決;**當天是請假日**(notes 有 auto_status)→ 行程段改標「🌴 請假日但有 N 場行程」並逐一列出,問要改期/取消/照開。「上班」在上班時間後才喊 → 第一掃直接當開工包
 2. **下班結算**(`config.schedule.evening_time`):完整 open 清單+今天新答應的事、還沒回的、明天第一件事;**週五加碼**本週 dismissed 大事清單(週報素材)。結算後主掃描停(排程核對自然達成),bot DM 末尾提「已下班,晚間有事在終端打『上班』」+**當日運轉摘要一行**(掃描 N 輪、發 DM N 則、自動回覆 N 則——當日輪數記在 state.json `today_stats`,開工包歸零)
-   - **Gmail 信箱檢查(每天只在結算做這一次)**:`mcp__claude_ai_Gmail__search_threads` query `in:inbox newer_than:<N>d -category:promotions -category:social -category:updates`,N = 距上次成功檢查的天數(state.json `last_mail_check`,本次跑完寫回今天;缺值=3——新裝或首次啟用自然回補近期積壓;上限 7)——週一補掃週末、假期後補掃整段。結算 DM 的「📧 信箱」段分三類列:
-     - **要行動/有期限**:回覆時限、活動報名、考核/評核、會議邀請、表單填寫、「請於 X 日前」句型、簽核/審批待辦(自動信但需行動照列)。期限 3 天內的同時寫進 notes(到期前照備忘提醒)
+   - **Gmail 信箱檢查(每天只在結算做這一次)**:`mcp__claude_ai_Gmail__search_threads` query `in:inbox newer_than:<N>d -category:promotions -category:social -category:updates`,N = 距上次成功檢查的天數(state.json `last_mail_check`,本次跑完寫回今天;缺值=3——新裝或首次啟用自然回補近期積壓;上限 7)——週一補掃週末、假期後補掃整段。結算 DM 的「📧 信箱」段分兩類列(**疑似釣魚不列**——公司天天有,MIS 自會提醒):
+     - **要行動/有期限**:回覆時限、活動報名、考核/評核、會議邀請、表單填寫、「請於 X 日前」句型。**出勤類簽核(加班/請假/補卡)不列**——公司另有系統管;期限 3 天內的同時寫進 notes(到期前照備忘提醒)
      - **值得知道(FYI,不寫 notes)**:主管/HR/財務/法務等重要來源的非例行信、與使用者負責產品直接相關的非例行信(如平台審核結果、上架/發佈通知)
-     - **⚠️ 疑似釣魚**:恐嚇/誘導點連結、假冒服務商、寄件網域可疑 → 單獨警示並講疑點,提醒勿點
    
-   每天固定自動寄的報表/系統通知/廣告/純群發 FYI 一律不列;三類都沒命中就不出現這段。**只讀不回**,回信仍由使用者自己處理;Gmail MCP 未連線/不可用 → 整段靜默跳過,不報錯
+   每天固定自動寄的報表/系統通知/廣告/純群發 FYI 一律不列;兩類都沒命中就不出現這段。**只讀不回**,回信仍由使用者自己處理;Gmail MCP 未連線/不可用 → 整段靜默跳過,不報錯
    - **整合健檢(結算尾段,一項一行)**:檢查五條整合——Slack MCP(必備)、bot token(`auth.test`)、user token 及其 scopes(`users.profile:write`/`reactions:write`,看 auth.test 回應標頭)、Calendar MCP、Gmail MCP。缺的列「⚙️ 未串:<項目>(<失效的功能>)——要裝打『檢查安裝進度』,不想用回『<項目> 不用了』」;使用者回「X 不用了」→ 寫入 `config.disabled_integrations[]`,之後不再提醒。**故意關的不提醒**:bot 三欄全空、auto_reply 開關 false、已列入 disabled_integrations 的一律跳過;全部健康 → 這段不出現
 3. **會前 15 分提醒**:今日每個行程排一次性 cron(開始前 15 分),prompt「bot 提醒使用者:<行程>」
 4. **中途新增的當天行程補提醒**:每輪掃描檢查 notes 與當日日曆(與 §4.4 ③ 共用同一次 `list_events`),「今天、有開始時間、>現在+15 分、未排提醒」的補排,note 標 `reminder_scheduled: true`;15 分內開始的立刻 bot DM 提醒。補排時比對當日既有行程,**時間重疊 → 提醒訊息加「⚠️ 與 <場次> 撞期」**
