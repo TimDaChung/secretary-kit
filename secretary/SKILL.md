@@ -95,7 +95,7 @@ watchlist/@here 預設:watchlist 頻道 → 至少 P1(各頻道的 `note` 註記
 
 ### 4.4 Slack bot 同步(bot 有設定才跑)
 
-本輪有新增/升級 P0/P1 或備忘提醒才發 bot DM;「無新待回覆」不發。**bot 訊息每次列完整 open 清單**(Slack 端沒有終端上下文):①本輪變化(🆕/⬆️/✅,沒有就跳過)②「── 目前全部待辦 ──」後列所有 open 項(編號+級別 emoji+一句話+連結)③近期行程備忘(今明兩天)。
+本輪有新增/升級 P0/P1 或備忘提醒才發 bot DM;「無新待回覆」不發。**bot 訊息每次列完整 open 清單**(Slack 端沒有終端上下文):①本輪變化(🆕/⬆️/✅,沒有就跳過)②「── 目前全部待辦 ──」後列所有 open 項(編號+級別 emoji+一句話+連結)③近期行程(今明兩天,**notes ∪ Google 日曆 `list_events` 聯集**——中途新增進日曆的事件才不會漏)。
 
 發送(Bash curl):**此路徑僅限 bot→使用者的 DM 報告**;對外訊息(自動回覆、回 N)一律走 Slack MCP 以使用者帳號發——bot 不在的私人頻道會 `channel_not_found`。token 讀環境變數 `$SLACK_BOT_TOKEN`(讀不到 → 請使用者 `setx` 重設,本輪退回 self-DM);**中文 JSON 一律寫檔後 `--data-binary @file`**(inline `-d` 會 invalid_json);`POST https://slack.com/api/chat.postMessage`,body `{"channel":"<config.bot.dm_channel_id>","text":"..."}`。**冒號規則(屢犯項,發送前強制自檢)**:標籤與時間之間一律**全形冒號「：」**(「今天：10:00-12:00」)。組稿完成後、發送前**必跑 lint**:掃正則 `\S:\d`(冒號緊貼前字且後接數字),任何命中處改全形冒號,確認 0 命中才發送;刻意的 emoji 短碼(:white_check_mark: 等,冒號後是字母)不受影響。歷史案例:「今天:10:00」的 :10: 被 Slack 吃成 emoji,已重犯兩次——不跑 lint 就是會再犯。**URL 規則**(走 Slack MCP 發的訊息皆適用,含自動回覆與「回 N」):裸 URL 一律放訊息最後一行或前後留空行,否則後面的文字會被 markdown 轉換吃進連結變藍字;發錯已成事實 → user token `chat.update` 修自己的訊息。
 
@@ -159,7 +159,7 @@ cron 是 session 內記憶體,session 重開即消失,靠「上班」+本核對�
    
    每天固定自動寄的報表/系統通知/廣告/純群發 FYI 一律不列;三類都沒命中就不出現這段。**只讀不回**,回信仍由使用者自己處理;Gmail MCP 未連線/不可用 → 整段靜默跳過,不報錯
 3. **會前 15 分提醒**:今日每個行程排一次性 cron(開始前 15 分),prompt「bot 提醒使用者:<行程>」
-4. **中途新增的當天行程補提醒**:每輪掃描檢查 notes,「今天、有開始時間、>現在+15 分、未排提醒」的補排,note 標 `reminder_scheduled: true`;15 分內開始的立刻 bot DM 提醒。補排時比對當日既有行程,**時間重疊 → 提醒訊息加「⚠️ 與 <場次> 撞期」**
+4. **中途新增的當天行程補提醒**:每輪掃描檢查 notes 與當日日曆(與 §4.4 ③ 共用同一次 `list_events`),「今天、有開始時間、>現在+15 分、未排提醒」的補排,note 標 `reminder_scheduled: true`;15 分內開始的立刻 bot DM 提醒。補排時比對當日既有行程,**時間重疊 → 提醒訊息加「⚠️ 與 <場次> 撞期」**
 5. **預約請假**(「我 X 月 X 日請假」):記 note 帶 `auto_status`(`sick_fullday`/`leave_am`/自訂到幾點)。當天開工包或第一輪掃描執行:設狀態(病假=🤒+代理人後綴,整天 expiration=23:59,半天=指定時點)、進請假模式,標 `status_switched: true`。**預約時就提醒使用者:當天電腦要開著才會執行**;代理人同日也請假(查 notes)→ 換點別人。**預約當下順手查該日 Google 日曆**(`list_events`):有會議/行程 → bot DM 列出「你 X/X 請假,當天有:...」問要改期/取消/照開——取捨由使用者決定;要秘書代改期/刪除,僅限「[秘書] 」前綴的事件(用 `gcal_event_id`),別人邀的只能提醒使用者自己處理
 
 ## 會議同步 Google 日曆
