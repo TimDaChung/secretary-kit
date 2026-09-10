@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## v1.4.0 (2026-09-10)
+
+- **react 口令**:「react N :emoji:」「按 N 讚」以使用者身分按 react(需 user token 有 `reactions:write`);ack 類 emoji 順帶銷帳、pending 類標暫回
+- 安裝精靈:manifest 加 user scopes(`users.profile:write`、`reactions:write`),關卡 2/3 改為同時拿 bot + user 兩個 token(舊裝機戶要補:app OAuth 設定加 scope → Reinstall → setx SLACK_USER_TOKEN)
+
 ## v1.3.0 (2026-09-10)
 
 - **「確認中」暫回追蹤**:回「確認中/請稍等/請稍候」或按 pending emoji(config.style.pending_emojis,如 :loading:)不再視為已回——待辦標 ⏳ 掛著,超過 pending_timeout_hours(預設 4h)無實質回覆 → bot 提醒;下班結算列所有未結暫回項。config.style 新增 pending_emojis / pending_patterns / pending_timeout_hours

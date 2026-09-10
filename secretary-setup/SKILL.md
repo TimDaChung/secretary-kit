@@ -76,18 +76,22 @@ oauth_config:
       - chat:write
       - im:write
       - users:read
+    user:
+      - users.profile:write
+      - reactions:write
 settings:
   org_deploy_enabled: false
   socket_mode_enabled: false
 ```
 2. 建立後 → 左側 **Install App** → **Install to Workspace** → 授權
    - 若顯示「Request to install / 需要管理員核准」→ 送出申請,等核准信再回來繼續(這是全流程唯一可能要等人的地方)
-3. 安裝完成後複製 **Bot User OAuth Token**(`xoxb-` 開頭)→ 進關卡 3
+3. 安裝完成後複製兩個 token → 進關卡 3:**Bot User OAuth Token**(`xoxb-` 開頭)與 **User OAuth Token**(`xoxp-` 開頭,會議/請假自動切狀態與 react 口令用)
 
 ### 關卡 3:設 token 環境變數
 PowerShell 執行(token 換成自己的):
 ```powershell
 setx SLACK_BOT_TOKEN "xoxb-你的token"
+setx SLACK_USER_TOKEN "xoxp-你的token"
 ```
 然後**完全關掉 Claude Code 終端重開**(setx 只對新視窗生效)。重開後回來說「檢查安裝進度」,我會用 `auth.test` 驗證。
 
