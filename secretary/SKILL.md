@@ -23,7 +23,7 @@ description: Slack 待回覆秘書(通用版)。掃描 DM + mentions + watchlist
 - `dismissed[]`(已銷 id)、`dismissed_patterns[]`(例行訊息文字黑名單,substring 比對)、`notes[]`(備忘)
 - `mode_scan_interval_min` 執行期覆寫值、`cron_jobs`(見各節)
 - `session_first_scan_done`:新 session 由「上班」重設為 false
-- 檔案不存在或 `last_run` 超過 24 小時 → 以 24 小時前為掃描起點
+- 檔案不存在 → 以 24 小時前為掃描起點;有 `last_run` → **一律以 last_run 為起點(上限 7 天前)**——週一自然補掃週末、假期後自然補掃整段
 
 ack emoji 清單讀 `config.style.ack_emojis`;muted 清單讀 `config.muted_channels`。口令更新這兩者時直接寫回 config.json。
 
@@ -33,7 +33,7 @@ ack emoji 清單讀 `config.style.ack_emojis`;muted 清單讀 `config.muted_chan
 
 每輪掃描(含開工包、下班結算)主 session **不自己跑下面 1~5 節**,改派一個 general-purpose subagent 執行,prompt 自包含,要點:
 
-> 讀 `~/.claude/skills/secretary/SKILL.md` 的「流程 1~5」「優先級」「每日節奏」各節與同目錄 `config.json`、`state.json`,執行完整掃描(含 bot DM 發送;開工包/結算輪含該節加碼項),結果寫回 `state.json`,回傳兩段:(a) 新增/變化項摘要 ≤15 行(編號+一句話) (b) 需主 session 排 cron 的事項清單(新會議提醒、模式切換、行程補提醒)。
+> 讀 `~/.claude/skills/secretary/SKILL.md` **整份**(「排程核對」節除外——cron 歸主 session 管)與同目錄 `config.json`、`state.json`,執行完整掃描(含 bot DM 發送;開工包/結算輪含該節加碼項),結果寫回 `state.json`,回傳兩段:(a) 新增/變化項摘要 ≤15 行(編號+一句話) (b) 需主 session 排 cron 的事項清單(新會議提醒、模式切換、行程補提醒)。
 
 主 session 每輪只做:**排程核對(cron 只能在主 session 建/刪)→ 派 agent → 讀回摘要 → 補排 cron → 顯示摘要給使用者**。Slack 搜尋結果與頻道內容**絕不進主 session context**——這是本設計的目的,使 session 全天保持輕量、不觸發壓縮。
 
@@ -47,7 +47,7 @@ ack emoji 清單讀 `config.style.ack_emojis`;muted 清單讀 `config.muted_chan
 3. **watchlist(有新訊息就報,不限點名)**:逐一 `slack_read_channel`(`oldest=<last_run>`),頻道清單 = `config.watchlist[]`(每項 `{id, name, note}`,`note` 是分級參考註記)。使用者自己發的略過;同話題連續訊息合併成一項
 4. **全 workspace @here/@channel**:search query `here`(**不加引號**,加引號搜不到),`only_my_channels=true`、`after`、`sort=timestamp`,只留原文含 `<!here>`/`<!channel>` 的;使用者自己發的略過
 5. **Bot DM 指令通道**(bot 有設定才跑):`slack_read_channel`(`config.bot.dm_channel_id`)。**使用者在裡面發的訊息 = 秘書指令**(「銷 N」「記一下」「看全部」「回 N」等口令與終端相同),執行後 bot 回一句確認(「✅ #12 已銷」)。bot 自己的訊息略過;非指令留言存進對應 item 備註或回覆收到
-6. **React 銷帳**:對 `config.style.ack_emojis` 每顆搜 `to:me hasmy::<emoji>:`(`after`=最舊 open 的 first_seen),命中 = 使用者已處理,自動銷帳。帶膚色要搜 `:+1::skin-tone-N:` 完整寫法。**pending emoji 不銷帳**:對 `config.style.pending_emojis` 同法逐顆搜 `hasmy:`,命中 = 使用者回了「確認中」的 react → 不銷帳,item 標 `pending_since`(見第 2 節例外)
+6. **React 銷帳**(`open[]` 為空 → 本節含 pending 搜尋整段跳過):對 `config.style.ack_emojis` 每顆搜 `to:me hasmy::<emoji>:`(`after`=最舊 open 的 first_seen),命中 = 使用者已處理,自動銷帳。帶膚色要搜 `:+1::skin-tone-N:` 完整寫法。**pending emoji 不銷帳**:對 `config.style.pending_emojis` 同法逐顆搜 `hasmy:`,命中 = 使用者回了「確認中」的 react → 不銷帳,item 標 `pending_since`(見第 2 節例外)
 
 ### 1.5 承諾偵測(掃使用者自己的訊息)
 
@@ -97,7 +97,7 @@ bot 識別:app `config.bot.app_id`,bot user `config.bot.bot_user_id`,DM 頻道 `
 
 ### 4.5 P0 推播
 
-新 P0 或 P1 升 P0 → `PushNotification`(status: "proactive"),一行「Slack P0:<誰><摘要>」。人在終端前系統自動略過,照呼叫即可。P1/P2 不推。
+新 P0 或 P1 升 P0 → 推播一行「Slack P0:<誰><摘要>」。**推播由主 session 發**:掃描 agent 只在回傳摘要標「🔴 新 P0」,主 session 讀到後呼叫 `PushNotification`(status: "proactive")——subagent 自己呼叫可能推不到使用者終端。人在終端前系統自動略過,照呼叫即可。P1/P2 不推。
 
 ### 5. 更新狀態檔
 
@@ -144,7 +144,7 @@ cron 是 session 內記憶體,session 重開即消失,靠「上班」+本核對�
 
 1. **晨間開工包**(`config.schedule.morning_time`):bot 完整清單+隔夜變化+今日行程。**今日行程 = notes 今天的 ∪ Google 日曆今天的 events**(`list_events`,含週期事件如每週固定會議);會前提醒與切狀態 cron 以聯集排,重複的只排一次。**撞期偵測**:行程聯集內時間重疊的,行程段頂部標「⚠️ 撞期:<場次A> × <場次B>」,取捨由使用者決定,秘書不代決;**當天是請假日**(notes 有 auto_status)→ 行程段改標「🌴 請假日但有 N 場行程」並逐一列出,問要改期/取消/照開。「上班」在上班時間後才喊 → 第一掃直接當開工包
 2. **下班結算**(`config.schedule.evening_time`):今天新答應的事、還沒回的、明天第一件事;**週五加碼**本週 dismissed 大事清單(週報素材)。結算後主掃描停(排程核對自然達成),bot DM 末尾提「已下班,晚間有事在終端打『上班』」+**當日運轉摘要一行**(掃描 N 輪、發 DM N 則、自動回覆 N 則——當日輪數記在 state.json `today_stats`,開工包歸零)
-   - **Gmail 信箱檢查(每天只在結算做這一次)**:`mcp__claude_ai_Gmail__search_threads` query `in:inbox newer_than:<N>d -category:promotions -category:social -category:updates`,N = 距上次成功檢查的天數(state.json `last_mail_check`,本次跑完寫回今天;缺值=1,上限 7)——週一自然補掃週末、假期後自然補掃整段。結算 DM 的「📧 信箱」段分三類列:
+   - **Gmail 信箱檢查(每天只在結算做這一次)**:`mcp__claude_ai_Gmail__search_threads` query `in:inbox newer_than:<N>d -category:promotions -category:social -category:updates`,N = 距上次成功檢查的天數(state.json `last_mail_check`,本次跑完寫回今天;缺值=3——新裝或首次啟用自然回補近期積壓;上限 7)——週一補掃週末、假期後補掃整段。結算 DM 的「📧 信箱」段分三類列:
      - **要行動/有期限**:回覆時限、活動報名、考核/評核、會議邀請、表單填寫、「請於 X 日前」句型、簽核/審批待辦(自動信但需行動照列)。期限 3 天內的同時寫進 notes(到期前照備忘提醒)
      - **值得知道(FYI,不寫 notes)**:主管/HR/財務/法務等重要來源的非例行信、與使用者負責產品直接相關的非例行信(如平台審核結果、上架/發佈通知)
      - **⚠️ 疑似釣魚**:恐嚇/誘導點連結、假冒服務商、寄件網域可疑 → 單獨警示並講疑點,提醒勿點
