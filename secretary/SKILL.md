@@ -95,11 +95,30 @@ watchlist/@here 預設:watchlist 頻道 → 至少 P1(各頻道的 `note` 註記
 - 之後輪次:只列**新增/升級的 P0/P1**,其餘壓一行「另有 N 項掛著(#3 #5),說『看全部』展開」
 - 「看全部」→ 完整清單;無新項 → 一句「無新待回覆(掛著 N 項)」
 
-### 4.4 Slack bot 同步(bot 有設定才跑)
+### 4.4 bot DM 組稿規範(bot 有設定才跑;組稿 → 自檢 → 發送,依序執行)
 
-本輪有新增/升級 P0/P1 或備忘提醒才發 bot DM;「無新待回覆」不發。**bot 訊息每輪必列完整 open 清單**(Slack 端沒有終端上下文;「另掛 N 項,說看全部展開」的增量式**只屬於終端輸出,bot DM 禁用**——2026-09-10 17:16 已違規簡化過一次,不列完整清單=使用者漏事):①本輪變化(🆕/⬆️/✅,沒有就跳過)②「── 目前全部待辦 ──」列所有 open 項(編號+級別 emoji+一句話+連結)③近期行程(今明兩天,**notes ∪ Google 日曆 `list_events` 聯集**)——③僅開工包與下班結算輪附,平時輪次不列(補提醒的日曆檢查照每輪跑,只是不輸出)。唯一例外:**eco 模式**的平時輪可只列變化+「另掛 N 項」一行。
+**發不發**:本輪有新增/升級 P0/P1、備忘/暫回/里程碑提醒才發;「無新待回覆」不發。
 
-發送(Bash curl):**此路徑僅限 bot→使用者的 DM 報告**;對外訊息(自動回覆、回 N)一律走 Slack MCP 以使用者帳號發——bot 不在的私人頻道會 `channel_not_found`。token 讀環境變數 `$SLACK_BOT_TOKEN`(讀不到 → 請使用者 `setx` 重設,本輪退回 self-DM);**中文 JSON 一律寫檔後 `--data-binary @file`**(inline `-d` 會 invalid_json);`POST https://slack.com/api/chat.postMessage`,body `{"channel":"<config.bot.dm_channel_id>","text":"..."}`。**冒號規則(屢犯項,發送前強制自檢)**:標籤與時間之間一律**全形冒號「：」**(「今天：10:00-12:00」)。組稿完成後、發送前**必跑 lint**:掃正則 `\S:\d`(冒號緊貼前字且後接數字),任何命中處改全形冒號,確認 0 命中才發送;刻意的 emoji 短碼(:white_check_mark: 等,冒號後是字母)不受影響。歷史案例:「今天:10:00」的 :10: 被 Slack 吃成 emoji,已重犯兩次——不跑 lint 就是會再犯。**URL 規則**(走 Slack MCP 發的訊息皆適用,含自動回覆與「回 N」):裸 URL 一律放訊息最後一行或前後留空行,否則後面的文字會被 markdown 轉換吃進連結變藍字;發錯已成事實 → user token `chat.update` 修自己的訊息。
+**訊息骨架(固定順序,填空式)**:
+- ①本輪變化:🆕 新增/⬆️ 升級/✅ 已銷/🔄 更新,一項一行(編號+級別 emoji+一句話+連結);無變化跳過此段
+- ②「── 目前全部待辦 ──」:**所有** open 項一項一行;pending 項行尾標「⏳ 你回了確認中」
+- ③近期行程(今明兩天,notes ∪ Google 日曆 `list_events` 聯集)
+- ④提醒行(備忘/暫回逾時/里程碑/催收,有才出現)
+
+**輪型決定段落**:
+| 輪型 | 段落 |
+|---|---|
+| 開工包/下班結算 | ①②③④ 全上+各自加碼項(見〈每日節奏〉) |
+| 平時輪(standard) | ①②④——**② 每輪必列完整,禁用「另掛 N 項說看全部」**(2026-09-10 17:16 違規簡化過一次:少列=使用者漏事);③ 不列 |
+| 平時輪(eco) | ①④+一行「另掛 N 項(#3 #5)」——唯一允許增量的情境 |
+
+**發送前自檢(逐條核對,全過才發)**:
+1. ② 完整清單在嗎?(eco 平時輪以外必在)
+2. 冒號 lint:掃 `\S:\d`(冒號緊貼前字、後接數字)→ 命中一律改全形「：」,0 命中才過。屢犯 2 次:「今天:10:00」的 :10: 被 Slack 吃成 emoji;emoji 短碼(:white_check_mark:,冒號後是字母)不受影響
+3. 裸 URL 是否都在訊息最後一行或前後空行?否則後文被吃進連結變藍字(已發錯 → user token `chat.update` 修自己的訊息)
+4. 標籤+時間全用全形冒號?(「今天：10:00-12:00」)
+
+**發送機制**:Bash curl `POST https://slack.com/api/chat.postMessage`,body `{"channel":"<config.bot.dm_channel_id>","text":"..."}`;token 讀 `$SLACK_BOT_TOKEN`(讀不到 → 請使用者 `setx` 重設,本輪退回 self-DM);**中文 JSON 一律寫檔後 `--data-binary @file`**(inline `-d` 會 invalid_json)。**此路徑僅限 bot→使用者的 DM 報告**;對外訊息(自動回覆、回 N)一律走 Slack MCP 以使用者帳號發(bot 不在的私人頻道會 `channel_not_found`),自檢第 3 條同樣適用。
 
 bot 識別:app `config.bot.app_id`,bot user `config.bot.bot_user_id`,DM 頻道 `config.bot.dm_channel_id`。掃描時忽略 bot 自己的訊息與 self-DM 裡「🤖 秘書」開頭的舊訊息。
 
@@ -124,7 +143,7 @@ bot 識別:app `config.bot.app_id`,bot user `config.bot.bot_user_id`,DM 頻道 `
 | 模式掃描(間隔 `mode_scan_interval_min`;**不受午休影響**) | 會議/請假模式中 |
 | 一次性:會前提醒、會議開始切狀態、模式結束補掃、預約請假 | 照各節規則排,執行完即消 |
 
-**省量模式**:`config.schedule.profile` = "standard"(預設)/"eco"。eco 生效時:主掃描與模式掃描間隔 ×2(主掃至少 60 分)、bot DM 非開工包/結算輪只列本輪變化;P0 推播與口令回應不受影響。口令「**省量模式**」/「**標準模式**」即切換並寫回 config。**額度自動降頻**:掃描或擬稿遇到 usage/rate limit 類錯誤 → 當日臨時視同 eco 並 bot DM 告知「額度吃緊,今日已降頻」,隔天開工包恢復 config 設定值。
+**省量模式**:`config.schedule.profile` = "standard"(預設)/"eco"。eco 生效時:主掃描與模式掃描間隔 ×2(主掃至少 60 分)、bot DM 平時輪改增量(見 §4.4 輪型表);P0 推播與口令回應不受影響。口令「**省量模式**」/「**標準模式**」即切換並寫回 config。**額度自動降頻**:掃描或擬稿遇到 usage/rate limit 類錯誤 → 當日臨時視同 eco 並 bot DM 告知「額度吃緊,今日已降頻」,隔天開工包恢復 config 設定值。
 
 cron 是 session 內記憶體,session 重開即消失,靠「上班」+本核對重建。此設計讓 session 重開、規則改版、模式異常殘留都在下一輪自癒。
 
