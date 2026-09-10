@@ -100,8 +100,8 @@ setx SLACK_USER_TOKEN "xoxp-你的token"
 2. 未連線 → 到 https://claude.ai/settings/connectors 把 **Slack** 連上,登入自己的 Gamesofa 帳號並授權
 3. 回終端 `/mcp` 確認已連,回來說「檢查安裝進度」驗證
 
-### 關卡 5:連 Google Calendar MCP(選配)
-同關卡 4,在 https://claude.ai/settings/connectors 連 **Google Calendar**,登入公司 Google 帳號。跳過的話,秘書的行程提醒只吃手動備忘,不吃日曆。
+### 關卡 5:連 Google Calendar 與 Gmail MCP(皆選配)
+同關卡 4,在 https://claude.ai/settings/connectors 連 **Google Calendar** 與 **Gmail**,登入公司 Google 帳號。跳過 Calendar → 行程提醒只吃手動備忘,不吃日曆;跳過 Gmail → 下班結算沒有「限時信」段,其餘照常。
 
 ### 關卡 6:填 config.json
 問答式逐項幫使用者填 `~/.claude/skills/secretary/config.json`(格式見 kit 內 `config.example.json`):
