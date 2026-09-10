@@ -61,7 +61,27 @@ description: 個人 Slack 秘書安裝精靈。引導使用者從零裝好自己
 **zip 備援**:沒有 git 也能裝——跟 Tim 要最新版 zip,解壓後把 `secretary/` 與 `secretary-setup/` 複製到 `~/.claude/skills/`,再做上面第 4 步;差別只在不能用「秘書升級」一鍵升級,更新要重新拿 zip。
 
 ### 關卡 2:建立 Slack Bot 並拿 token
-1. 開 https://api.slack.com/apps → **Create New App** → **From an app manifest** → workspace 選 **Gamesofa** → 貼下方 manifest(app 名稱把 `<你的名字>` 改掉):
+
+**先問使用者走哪條路**:
+
+**A. 自動路線**(使用者裝了 Claude in Chrome 擴充才可選):先告知「我會用你的 Chrome 開 Slack 設定頁代你操作;安裝授權(Allow)那一步是 OAuth 授權,會請你本人按」。步驟:
+1. 確認 Chrome 已登入公司 Slack workspace
+2. 開 https://api.slack.com/apps → 代按 **Create New App** → **From an app manifest** → 選 workspace → 代貼下方 manifest(`<你的名字>` 代填)→ Create
+3. 左側 **Install App** → 代按 **Install to Workspace** → 跳出的**授權頁請使用者本人確認內容後自己按 Allow**(精靈不代按授權)
+4. 授權完成後到 **OAuth & Permissions** 頁讀出兩顆 token → 直接代跑關卡 3 的 setx → 提醒重開終端
+5. 若出現「Request to install / 需管理員核准」→ 代送申請即收工,等核准信後回來打「檢查安裝進度」續關
+
+**B. 手動路線**(無擴充或不想被代操作):
+1. 用**平常登入 Slack 的瀏覽器**開 https://api.slack.com/apps → 右上 **Create New App** → 選 **From an app manifest**(注意:不是 from scratch)→ workspace 下拉選公司的 → Next
+2. 先把 manifest 裡兩處 `<你的名字>` 改成自己的英文名,整段貼進 YAML 框 → Next → Review 頁確認權限清單 → **Create**
+3. 左側選單 **Install App** → **Install to Workspace** → 看完權限按 **Allow**
+   - 顯示「Request to install / 需要管理員核准」→ 送出申請,等核准信再回來續關(全流程唯一可能等人的地方)
+4. 安裝完成後左側 **OAuth & Permissions** 頁會有**兩顆 token,都要複製**:
+   - **User OAuth Token**(`xoxp-` 開頭,頁面靠上)——切狀態、react 口令用
+   - **Bot User OAuth Token**(`xoxb-` 開頭)——bot DM 報告用
+   - 只看到一顆或空白 = Install 沒完成,回步驟 3
+
+manifest(兩條路共用):
 ```yaml
 display_information:
   name: <你的名字>-secretary
@@ -83,17 +103,20 @@ settings:
   org_deploy_enabled: false
   socket_mode_enabled: false
 ```
-2. 建立後 → 左側 **Install App** → **Install to Workspace** → 授權
-   - 若顯示「Request to install / 需要管理員核准」→ 送出申請,等核准信再回來繼續(這是全流程唯一可能要等人的地方)
-3. 安裝完成後複製兩個 token → 進關卡 3:**Bot User OAuth Token**(`xoxb-` 開頭)與 **User OAuth Token**(`xoxp-` 開頭,會議/請假自動切狀態與 react 口令用)
+
+**常見卡點**:
+- 兩顆 token 分不清 → 看開頭:`xoxp`=User、`xoxb`=Bot;設反了關卡 3 驗證會抓出來
+- token 頁一直顯示等待核准 → 管理員還沒按,催 IT
+- manifest 貼上報錯 → 多半是 `<你的名字>` 沒改、或複製時縮排跑掉,整段重貼
+- 授權後找不到 token → 重新整理 OAuth & Permissions 頁
 
 ### 關卡 3:設 token 環境變數
-PowerShell 執行(token 換成自己的):
+使用者把兩顆 token 貼到對話裡,精靈**直接代跑**(或使用者自己執行):
 ```powershell
 setx SLACK_BOT_TOKEN "xoxb-你的token"
 setx SLACK_USER_TOKEN "xoxp-你的token"
 ```
-然後**完全關掉 Claude Code 終端重開**(setx 只對新視窗生效)。重開後回來說「檢查安裝進度」,我會用 `auth.test` 驗證。
+然後**完全關掉 Claude Code 終端重開**(setx 只對新視窗生效)。重開後打「檢查安裝進度」,精靈用 `auth.test` 分別驗兩顆:xoxb 應回 bot 名、xoxp 應回本人帳號,並檢查 xoxp 的 `x-oauth-scopes` 含 `reactions:write` 與 `users.profile:write`;驗證失敗最常見原因是兩顆設反——對調重設即可。
 
 ### 關卡 4:連 Slack MCP(你的個人帳號)
 1. 在 Claude Code 輸入 `/mcp` 看 claude.ai Slack 連線狀態
