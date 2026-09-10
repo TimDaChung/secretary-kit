@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## v1.5.0 (2026-09-10)
+
+- **信箱檢查改寬版三段式**(原「限時信檢查」):要行動/有期限(近期到期寫備忘)+值得知道 FYI(重要來源/自家產品非例行信)+疑似釣魚單獨警示;動態天數補週末假期;簽核/審批類自動信不再被誤殺
+
 ## v1.4.0 (2026-09-10)
 
 - **react 口令**:「react N :emoji:」「按 N 讚」以使用者身分按 react(需 user token 有 `reactions:write`);ack 類 emoji 順帶銷帳、pending 類標暫回;「按 N 確認中/請稍候」= 按 pending_emojis 第一顆(如 :loading:)
