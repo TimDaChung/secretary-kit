@@ -2,7 +2,7 @@
 
 ## v1.4.0 (2026-09-10)
 
-- **react 口令**:「react N :emoji:」「按 N 讚」以使用者身分按 react(需 user token 有 `reactions:write`);ack 類 emoji 順帶銷帳、pending 類標暫回
+- **react 口令**:「react N :emoji:」「按 N 讚」以使用者身分按 react(需 user token 有 `reactions:write`);ack 類 emoji 順帶銷帳、pending 類標暫回;「按 N 確認中/請稍候」= 按 pending_emojis 第一顆(如 :loading:)
 - 安裝精靈:manifest 加 user scopes(`users.profile:write`、`reactions:write`),關卡 2/3 改為同時拿 bot + user 兩個 token(舊裝機戶要補:app OAuth 設定加 scope → Reinstall → setx SLACK_USER_TOKEN)
 
 ## v1.3.0 (2026-09-10)
