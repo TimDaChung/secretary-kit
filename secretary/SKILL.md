@@ -67,6 +67,8 @@ ack emoji 清單讀 `config.style.ack_emojis`;muted 清單讀 `config.muted_chan
 
 依對話(DM/群組 DM/channel+thread)分組。最後一則候選之後使用者在**同一對話/thread**有發言 → 視為已回,整組剔除;歸屬不明才用 `slack_read_thread` 補查,能省則省。
 
+**跨層回覆判斷**:候選訊息在 thread、使用者之後在**同頻道主流**發言(或反過來:候選在主流、回在某 thread)→ 不能只看同層。讀該發言內容判斷是否在回應此事:明顯對應(「可以」「收到」「時間再跟我說」等接續語意)→ 視為已回銷掉;判斷不出 → item 保留但備註「你在頻道回了:『<前 20 字>』,若即此事請銷」,且該輪不累計第 N 次提醒。
+
 **例外——「確認中」暫回不算已回**:使用者那則發言只是暫緩回應(文字命中 `config.style.pending_patterns`,或整則只有 pending emoji)→ 不剔除,item 標 `pending_since=<該發言 ts>` 保留(清單上顯示「⏳ 你回了確認中」),等實質回覆才自動銷;使用者仍可手動「銷 N」。已標 pending 的 item 再次命中暫回 → 只更新 pending_since,不重複提醒。
 
 再剔除:**`config.muted_channels` 名單內的對話一律完全無視**(不整理、不進清單、不自動回覆——比 dismissed 更徹底,整個對話靜音)、`dismissed` 內的 id、命中 `dismissed_patterns` 的、純閒聊噪音(貼圖/梗圖/哈拉且無問句無點名無工作字眼)。口令「這個群不用管/無視 X」→ 查出頻道 id 加入 `config.muted_channels`(記 id+成員描述);「取消無視 X」→ 移除。**例行排程 @here**(每天同文案的機器人提醒)摺疊成清單底部一行「例行提醒 ×N」;使用者說「例行的不用列」→ 文案加入 `dismissed_patterns`。
