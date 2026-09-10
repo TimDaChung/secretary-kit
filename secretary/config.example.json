@@ -1,0 +1,72 @@
+{
+  "_comment": "秘書 skill 個人設定範例。複製成同目錄 config.json 後填入自己的資料;所有 _comment 欄位僅為說明,可保留或刪除。ID 查法:Slack 個人檔案/頻道詳情最下方的 Member ID / Channel ID。",
+
+  "user": {
+    "_comment": "必填。user_id = 你的 Slack Member ID(U 開頭);name = 顯示名(自動回覆與報告會用到)。",
+    "user_id": "U00000000",
+    "name": "王小明"
+  },
+
+  "workspace_url": "https://example-workspace.slack.com",
+  "_comment_workspace_url": "必填。你的 Slack workspace 網址,拿不到 permalink 時用來拼退路連結。",
+
+  "bot": {
+    "_comment": "選填(要嘛三欄全填、要嘛全空字串 = 停用 bot DM 報告與 bot 指令通道)。app_id = Slack App ID(A 開頭);bot_user_id = bot 的 Member ID(U 開頭);dm_channel_id = 你與 bot 的 DM 頻道 ID(D 開頭)。token 放環境變數 SLACK_BOT_TOKEN,不寫進本檔。",
+    "app_id": "A00000000",
+    "bot_user_id": "U00000001",
+    "dm_channel_id": "D00000000"
+  },
+
+  "watchlist": [
+    {
+      "_comment": "有新訊息就報(不限點名)的頻道。id = 頻道 ID(C/G 開頭);name = 頻道名;note = 分級參考註記(選填)。",
+      "id": "C00000001",
+      "name": "#範例-全產品通報",
+      "note": "自家產品線相關 P1、其他 P2"
+    },
+    {
+      "id": "C00000002",
+      "name": "#範例-部門群",
+      "note": "至少 P1,點名或要決策升 P0"
+    }
+  ],
+
+  "muted_channels": [],
+  "_comment_muted_channels": "完全無視的頻道/對話 ID 清單(不整理、不進清單、不自動回覆)。可留空,執行期用口令「無視 X」增減。",
+
+  "schedule": {
+    "_comment": "必填。morning_time/evening_time = 開工包與下班結算時刻(24 小時制 HH:MM);scan_interval_min = 主掃描間隔分鐘;mode_scan_interval_min = 會議/請假模式掃描間隔分鐘。",
+    "_comment_lunch_break": "午休期間主掃描不跑,改由開始/結束各一次的邊界掃銜接;設 null = 不設午休。",
+    "morning_time": "09:03",
+    "evening_time": "18:27",
+    "scan_interval_min": 30,
+    "mode_scan_interval_min": 60,
+    "lunch_break": {"start": "12:00", "end": "13:30"}
+  },
+
+  "deputies": [
+    {
+      "_comment": "請假時的代理人對照(可空陣列 = 自動回覆不點名)。product_line = 產品線/職掌關鍵字;name = 代理人顯示名;slack_id = 代理人 Member ID。",
+      "product_line": "產品線A",
+      "name": "代理人甲",
+      "slack_id": "U00000002"
+    },
+    {
+      "product_line": "產品線B",
+      "name": "代理人乙",
+      "slack_id": "U00000003"
+    }
+  ],
+
+  "style": {
+    "_comment": "tone_notes = 擬稿語氣微調(選填,自由文字,例:「簡短直接,同輩不加客套」);空字串 = 用預設「工作上的官方語氣,客氣即可」。ack_emojis = 你慣用的已讀/處理完 react(供 React 銷帳)。",
+    "tone_notes": "",
+    "ack_emojis": ["+1", "white_check_mark"]
+  },
+
+  "auto_reply_config": {
+    "_comment": "狀態自動回覆開關,兩者獨立。false = 只切狀態不自動回覆。",
+    "meeting": true,
+    "vacation": true
+  }
+}
