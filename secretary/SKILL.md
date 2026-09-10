@@ -97,7 +97,9 @@ watchlist/@here 預設:watchlist 頻道 → 至少 P1(各頻道的 `note` 註記
 
 ### 4.4 Slack bot 同步(bot 有設定才跑)
 
-本輪有新增/升級 P0/P1 或備忘提醒才發 bot DM;「無新待回覆」不發。**bot 訊息每次列完整 open 清單**(Slack 端沒有終端上下文):①本輪變化(🆕/⬆️/✅,沒有就跳過)②「── 目前全部待辦 ──」後列所有 open 項(編號+級別 emoji+一句話+連結)③近期行程(今明兩天,**notes ∪ Google 日曆 `list_events` 聯集**)——**此段僅開工包與下班結算輪附**,平時輪次不列;補提醒所需的日曆檢查照每輪跑,只是不輸出。
+本輪有新增/升級 P0/P1 或備忘提醒才發 bot DM;「無新待回覆」不發。訊息內容分輪型:
+- **開工包/下班結算輪 = 完整版**:①本輪變化(🆕/⬆️/✅)②「── 目前全部待辦 ──」列所有 open 項(編號+級別 emoji+一句話+連結)③近期行程(今明兩天,**notes ∪ Google 日曆 `list_events` 聯集**)
+- **平時輪次 = 增量版**:只列 ①本輪變化,結尾一行「另掛 N 項(#3 #5),回『看全部』展開」——**不重複未變動內容**;補提醒所需的日曆檢查照每輪跑,只是不輸出;「看全部」隨時可要完整清單。
 
 發送(Bash curl):**此路徑僅限 bot→使用者的 DM 報告**;對外訊息(自動回覆、回 N)一律走 Slack MCP 以使用者帳號發——bot 不在的私人頻道會 `channel_not_found`。token 讀環境變數 `$SLACK_BOT_TOKEN`(讀不到 → 請使用者 `setx` 重設,本輪退回 self-DM);**中文 JSON 一律寫檔後 `--data-binary @file`**(inline `-d` 會 invalid_json);`POST https://slack.com/api/chat.postMessage`,body `{"channel":"<config.bot.dm_channel_id>","text":"..."}`。**冒號規則(屢犯項,發送前強制自檢)**:標籤與時間之間一律**全形冒號「：」**(「今天：10:00-12:00」)。組稿完成後、發送前**必跑 lint**:掃正則 `\S:\d`(冒號緊貼前字且後接數字),任何命中處改全形冒號,確認 0 命中才發送;刻意的 emoji 短碼(:white_check_mark: 等,冒號後是字母)不受影響。歷史案例:「今天:10:00」的 :10: 被 Slack 吃成 emoji,已重犯兩次——不跑 lint 就是會再犯。**URL 規則**(走 Slack MCP 發的訊息皆適用,含自動回覆與「回 N」):裸 URL 一律放訊息最後一行或前後留空行,否則後面的文字會被 markdown 轉換吃進連結變藍字;發錯已成事實 → user token `chat.update` 修自己的訊息。
 
@@ -124,7 +126,7 @@ bot 識別:app `config.bot.app_id`,bot user `config.bot.bot_user_id`,DM 頻道 `
 | 模式掃描(間隔 `mode_scan_interval_min`;**不受午休影響**) | 會議/請假模式中 |
 | 一次性:會前提醒、會議開始切狀態、模式結束補掃、預約請假 | 照各節規則排,執行完即消 |
 
-**省量模式**:`config.schedule.profile` = "standard"(預設)/"eco"。eco 生效時:主掃描與模式掃描間隔 ×2(主掃至少 60 分)、bot DM 在非開工包/結算輪只列本輪變化(不附完整 open 清單)、P0 推播與口令回應不受影響。口令「**省量模式**」/「**標準模式**」即切換並寫回 config。**額度自動降頻**:掃描或擬稿遇到 usage/rate limit 類錯誤 → 當日臨時視同 eco 並 bot DM 告知「額度吃緊,今日已降頻」,隔天開工包恢復 config 設定值。
+**省量模式**:`config.schedule.profile` = "standard"(預設)/"eco"。eco 生效時:主掃描與模式掃描間隔 ×2(主掃至少 60 分);P0 推播與口令回應不受影響(bot DM 平時輪本來就只列增量)。口令「**省量模式**」/「**標準模式**」即切換並寫回 config。**額度自動降頻**:掃描或擬稿遇到 usage/rate limit 類錯誤 → 當日臨時視同 eco 並 bot DM 告知「額度吃緊,今日已降頻」,隔天開工包恢復 config 設定值。
 
 cron 是 session 內記憶體,session 重開即消失,靠「上班」+本核對重建。此設計讓 session 重開、規則改版、模式異常殘留都在下一輪自癒。
 
@@ -153,7 +155,7 @@ cron 是 session 內記憶體,session 重開即消失,靠「上班」+本核對�
 ## 每日節奏
 
 1. **晨間開工包**(`config.schedule.morning_time`):bot 完整清單+隔夜變化+今日行程。**今日行程 = notes 今天的 ∪ Google 日曆今天的 events**(`list_events`,含週期事件如每週固定會議);會前提醒與切狀態 cron 以聯集排,重複的只排一次。**撞期偵測**:行程聯集內時間重疊的,行程段頂部標「⚠️ 撞期:<場次A> × <場次B>」,取捨由使用者決定,秘書不代決;**當天是請假日**(notes 有 auto_status)→ 行程段改標「🌴 請假日但有 N 場行程」並逐一列出,問要改期/取消/照開。「上班」在上班時間後才喊 → 第一掃直接當開工包
-2. **下班結算**(`config.schedule.evening_time`):今天新答應的事、還沒回的、明天第一件事;**週五加碼**本週 dismissed 大事清單(週報素材)。結算後主掃描停(排程核對自然達成),bot DM 末尾提「已下班,晚間有事在終端打『上班』」+**當日運轉摘要一行**(掃描 N 輪、發 DM N 則、自動回覆 N 則——當日輪數記在 state.json `today_stats`,開工包歸零)
+2. **下班結算**(`config.schedule.evening_time`):完整 open 清單+今天新答應的事、還沒回的、明天第一件事;**週五加碼**本週 dismissed 大事清單(週報素材)。結算後主掃描停(排程核對自然達成),bot DM 末尾提「已下班,晚間有事在終端打『上班』」+**當日運轉摘要一行**(掃描 N 輪、發 DM N 則、自動回覆 N 則——當日輪數記在 state.json `today_stats`,開工包歸零)
    - **Gmail 信箱檢查(每天只在結算做這一次)**:`mcp__claude_ai_Gmail__search_threads` query `in:inbox newer_than:<N>d -category:promotions -category:social -category:updates`,N = 距上次成功檢查的天數(state.json `last_mail_check`,本次跑完寫回今天;缺值=3——新裝或首次啟用自然回補近期積壓;上限 7)——週一補掃週末、假期後補掃整段。結算 DM 的「📧 信箱」段分三類列:
      - **要行動/有期限**:回覆時限、活動報名、考核/評核、會議邀請、表單填寫、「請於 X 日前」句型、簽核/審批待辦(自動信但需行動照列)。期限 3 天內的同時寫進 notes(到期前照備忘提醒)
      - **值得知道(FYI,不寫 notes)**:主管/HR/財務/法務等重要來源的非例行信、與使用者負責產品直接相關的非例行信(如平台審核結果、上架/發佈通知)
