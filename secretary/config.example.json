@@ -38,7 +38,9 @@
     "lunch_break": {
       "start": "12:00",
       "end": "13:30"
-    }
+    },
+    "profile": "standard",
+    "_comment_profile": "standard=預設;eco=掃描間隔×2+bot 訊息瘦身(Pro 方案額度緊時用,口令「省量模式」即切)"
   },
   "deputies": [
     {

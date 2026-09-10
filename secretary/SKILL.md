@@ -122,6 +122,8 @@ bot 識別:app `config.bot.app_id`,bot user `config.bot.bot_user_id`,DM 頻道 `
 | 模式掃描(間隔 `mode_scan_interval_min`;**不受午休影響**) | 會議/請假模式中 |
 | 一次性:會前提醒、會議開始切狀態、模式結束補掃、預約請假 | 照各節規則排,執行完即消 |
 
+**省量模式**:`config.schedule.profile` = "standard"(預設)/"eco"。eco 生效時:主掃描與模式掃描間隔 ×2(主掃至少 60 分)、bot DM 在非開工包/結算輪只列本輪變化(不附完整 open 清單)、P0 推播與口令回應不受影響。口令「**省量模式**」/「**標準模式**」即切換並寫回 config。**額度自動降頻**:掃描或擬稿遇到 usage/rate limit 類錯誤 → 當日臨時視同 eco 並 bot DM 告知「額度吃緊,今日已降頻」,隔天開工包恢復 config 設定值。
+
 cron 是 session 內記憶體,session 重開即消失,靠「上班」+本核對重建。此設計讓 session 重開、規則改版、模式異常殘留都在下一輪自癒。
 
 **假日不上班**:「onduty」啟動與開工包執行時先判斷——今天是週六日,或台灣國定假日(查日曆 `zh-tw.taiwan#holiday@group.v.calendar.google.com` 當天有無事件)→ 不建任何掃描 cron,回一句「今天假日,秘書休息;要值班打『上班』」。手動「上班」= 強制值班,不受此限。
