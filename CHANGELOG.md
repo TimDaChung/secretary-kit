@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## v1.9.1 (2026-09-11)
+
+- **修正:會議開始自動切狀態失效**——原流程用 curl `users.profile.get` 讀現況防蓋,但 manifest 沒列 `users.profile:read`,get 失敗導致整段中止、狀態沒切。改為:讀現況優先走 Slack MCP `slack_read_user_profile`(不吃 xoxp scope),MCP 不可用退 curl,兩路都失敗跳過防蓋直接切(bot DM 附註)
+- manifest user scopes 補 `users.profile:read`(備援用);舊裝機不補也不影響切狀態
+
 ## v1.9.0 (2026-09-10)
 
 - **下班結算加整合健檢**:未串的選配整合(Google Calendar / Gmail 等)會在結算時提醒一句;口令「X 不用了」記入 `config.disabled_integrations` 後永久不吵

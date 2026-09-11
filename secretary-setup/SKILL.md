@@ -98,6 +98,7 @@ oauth_config:
       - users:read
     user:
       - users.profile:write
+      - users.profile:read
       - reactions:write
       - chat:write
 settings:
@@ -117,7 +118,7 @@ settings:
 setx SLACK_BOT_TOKEN "xoxb-你的token"
 setx SLACK_USER_TOKEN "xoxp-你的token"
 ```
-然後**完全關掉 Claude Code 終端重開**(setx 只對新視窗生效)。重開後打「檢查安裝進度」,精靈用 `auth.test` 分別驗兩顆:xoxb 應回 bot 名、xoxp 應回本人帳號,並檢查 xoxp 的 `x-oauth-scopes` 含 `reactions:write`、`users.profile:write`、`chat:write`;驗證失敗最常見原因是兩顆設反——對調重設即可。
+然後**完全關掉 Claude Code 終端重開**(setx 只對新視窗生效)。重開後打「檢查安裝進度」,精靈用 `auth.test` 分別驗兩顆:xoxb 應回 bot 名、xoxp 應回本人帳號,並檢查 xoxp 的 `x-oauth-scopes` 含 `reactions:write`、`users.profile:write`、`users.profile:read`、`chat:write`(舊裝機缺 `users.profile:read` 不擋關——切狀態改走 Slack MCP 讀現況,此 scope 只是備援);驗證失敗最常見原因是兩顆設反——對調重設即可。
 
 ### 關卡 4:連 Slack MCP(你的個人帳號)
 1. 在 Claude Code 輸入 `/mcp` 看 claude.ai Slack 連線狀態

@@ -198,7 +198,7 @@ cron 是 session 內記憶體,session 重開即消失,靠「上班」+本核對�
 排會前提醒時,同一行程加排「會議開始」一次性 cron,prompt「/secretary 切會議狀態:<行程> 至 <結束時間>」:
 
 1. token:`$env:SLACK_USER_TOKEN`,讀不到用 `[Environment]::GetEnvironmentVariable("SLACK_USER_TOKEN","User")`;都沒有 → 請使用者 `setx`,本次跳過
-2. 先 `users.profile.get`:現況含「請假」「休假」→ 不覆蓋;使用者手動設的其他非空狀態 → 不覆蓋,bot DM 提一句。**get 回 `missing_scope`(token 沒有 `users.profile:read`)→ 不中止:跳過防蓋檢查直接做第 3 步,bot DM 附「(未能確認原狀態,已直接切會議中)」**——舊 manifest 沒列 read scope 會踩到,此為止血;根治 = manifest 補 `users.profile:read` 後 Reinstall
+2. 先讀現況(防蓋檢查):**用 Slack MCP `slack_read_user_profile`**(不帶 user_id = 本人,不吃 xoxp scope)。現況含「請假」「休假」→ 不覆蓋;使用者手動設的其他非空狀態 → 不覆蓋,bot DM 提一句。MCP 不可用 → 退 curl `users.profile.get`(需 `users.profile:read`);**兩路都讀不到 → 不中止:跳過防蓋檢查直接做第 3 步**,bot DM 附「(未能確認原狀態,已直接切會議中)」
 3. `users.profile.set`:status_text「會議中,<代理人後綴>」、emoji「📅」、**`status_expiration` = 會議結束**(到點自動清除,免排清除 cron;無結束時間 = 開始+1 小時)。中文 JSON 照鐵則寫檔 `--data-binary`
 4. 狀態含「會議」會觸發會議模式(自動回覆依開關)——預期行為
 
