@@ -250,7 +250,7 @@ cron 是 session 內記憶體,session 重開即消失,靠「上班」+本核對�
 
 ## 值班口令
 
-- **「秘書」「上班」「onduty」**(onduty = 啟動器 bat 的 ASCII 別名):跑排程核對建齊 cron、立刻完整掃一次、告知 job ID
+- **「秘書」「上班」「onduty」**(onduty = 啟動器 bat 的 ASCII 別名):跑排程核對建齊 cron、立刻完整掃一次、告知 job ID。**重開 session = 舊 cron 全消失**:上班時一併清除今天未結束行程的 `reminder_scheduled` 標記,讓首輪補提醒重新成對排(提醒+切狀態);當天已跑過的開工包/結算不重跑(cron 時間已過自然不觸發)
 - **「下班」**(提早下班):立即下班結算+停主掃描;每日 cron 保留,隔天開工包照常自動上班
 - **「關掉秘書」**:CronDelete 全部 job(含每日),一句話確認;job ID 不在 context 用 CronList 找
 - **「秘書升級」**:在 skill 資料夾的上層(即 repo 根——安裝採 junction,skill 資料夾就在 repo 內)跑 `git pull`;成功 → 摘要 `CHANGELOG.md` 的新增段落給使用者看,並提醒「排程核對會在下一輪自動套用新邏輯」;接著跑**升級後檢查**:repo 根有 `secretary-start.bat` 而使用者桌面沒有 → 問「新版附了啟動器(內建 Sonnet+當機紀錄),要放到桌面嗎?順便設開機自動值班嗎?」要 → 代複製(桌面/`shell:startup`);CHANGELOG 新段落若標注其他遷移動作也一併引導;有衝突或失敗 → **不硬解**,顯示錯誤訊息請使用者找管理者處理
