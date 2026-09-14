@@ -8,3 +8,4 @@
 - **功能**:見 [功能說明.md](功能說明.md)
 - **升級**:對秘書打口令「**秘書升級**」= 自動 `git pull` + 摘要更新內容(見 [CHANGELOG.md](CHANGELOG.md))
 - **隱私**:個人資料(`config.json`、`state.json`、個人版 `templates.md`)已 gitignore,只存在你自己的電腦,不進 repo
+- **太燒 token?**:秘書不會偷傳任何使用資料回來,值班一天覺得額度掉太快,請開 [Token 用量回報](https://github.com/TimDaChung/secretary-kit/issues/new?template=token-report.yml)。API 方案貼 `/cost`,Pro / Max 用 `npx ccusage@latest` 看數字;只填方便填的欄位就好

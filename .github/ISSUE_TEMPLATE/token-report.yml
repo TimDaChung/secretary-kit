@@ -1,0 +1,71 @@
+name: Token 用量回報
+description: 秘書值班一天太燒 token?把數字貼過來,幫我找出元兇。
+title: "[token] "
+labels: ["token-report"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感謝回報。所有欄位都是自願填,只填你方便的就好。
+        **怎麼看數字**:
+        - API 方案:在秘書終端打 `/cost`,直接貼結果
+        - Pro / Max 訂閱:`/cost` 不顯示用量,改用 `npx ccusage@latest` 看當天各 session 的 token 與估算成本
+  - type: dropdown
+    id: plan
+    attributes:
+      label: 方案
+      options:
+        - Pro
+        - Max
+        - API(自付 token)
+        - 不確定
+    validations:
+      required: true
+  - type: input
+    id: model
+    attributes:
+      label: 值班模型
+      placeholder: 例:Sonnet 5(用 secretary-start.bat 預設)/ Opus 5
+  - type: dropdown
+    id: mode
+    attributes:
+      label: 省量模式
+      options:
+        - 標準模式
+        - 省量模式
+        - 不確定
+    validations:
+      required: true
+  - type: input
+    id: hours
+    attributes:
+      label: 值班時數
+      placeholder: 例:一整個上班日約 9 小時
+  - type: input
+    id: version
+    attributes:
+      label: 秘書版本
+      description: 看 CHANGELOG.md 最上面那個版號
+      placeholder: 例:v1.9.2
+  - type: textarea
+    id: numbers
+    attributes:
+      label: Token / 成本數字
+      description: 直接貼 `/cost` 或 `ccusage` 的輸出,不用整理
+      render: text
+  - type: dropdown
+    id: feel
+    attributes:
+      label: 你的感受
+      options:
+        - 明顯太貴,以後不敢開
+        - 有點貴,但值得
+        - 可接受
+        - 比預期省
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: 其他觀察
+      description: 例如「額度中午就撞牆」「某個吵群讓每輪掃描都很長」「開工包跑很久」,這種線索最有價值
