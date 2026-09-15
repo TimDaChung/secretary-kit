@@ -38,7 +38,7 @@ description: 個人 Slack 秘書安裝精靈。引導使用者從零裝好自己
 
 ### 關卡 1:安裝技能檔案(git 安裝法)
 
-1. **前置**:`git --version` 檢查;沒裝 → `winget install --id Git.Git`(或到 https://git-scm.com 下載)
+1. **前置**:`git --version` 檢查;沒裝 → **直接問一次「要不要我幫你裝?」**,同意就代跑 `winget install --id Git.Git`(或到 https://git-scm.com 下載)。`python --version` 同樣檢查(部分輔助腳本會用到):缺 → 一樣問一次,同意代跑 `winget install Python.Python.3.12`。任一 runtime 裝完提醒**完全重開終端**再打「檢查安裝進度」續關
 2. **Clone repo**:
    ```
    git clone https://github.com/TimDaChung/secretary-kit.git %USERPROFILE%\secretary-kit
