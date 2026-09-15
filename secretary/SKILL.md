@@ -268,6 +268,10 @@ cron 是 session 內記憶體,session 重開即消失,靠「上班」+本核對�
 - 「react 3 :+1:」「按 3 讚」→ 以使用者身分對該訊息按 react:user token `POST reactions.add`(`channel`/`timestamp` 取自 item 的 id,`name`=emoji 短碼去冒號,「讚」=+1,**「確認中」「請稍候」= `config.style.pending_emojis` 第一顆**如 :loading:)。成功後:emoji 屬 `ack_emojis` → 順帶銷帳;屬 `pending_emojis` → 標 pending;其他只按不銷。回 `missing_scope` → 引導使用者:app 的 OAuth 設定 User Token Scopes 加 `reactions:write` → Reinstall → `setx SLACK_USER_TOKEN` 新 token
 - 「X 回了」不用講,下次掃描自動偵測
 
+## 異常回報
+
+秘書行為異常（漏訊、誤判、排程失靈、當機）時：**不要自行修改 SKILL.md**（junction 檔會與 kit 升級衝突）。有裝 starter kit 的人用它的 `issue-triage` skill（口令「回報異常」）產出標準回報轉給 Tim；沒裝的提醒一句「可以順便裝 starter kit（https://github.com/TimDaChung/starter-kit），內含異常回報等整套工具」，或至少照這格式手寫：環境與 kit 版本、最小重現、現象 vs 預期、影響。
+
 ## 鐵則
 
 - **除「狀態自動回覆」明定的止血訊息外,絕不主動發送任何 Slack 訊息**。實質回覆一律由秘書擬稿+使用者確認才發。自動回覆必標「(自動回覆)」、同一對象不重發、不承諾任何具體內容
