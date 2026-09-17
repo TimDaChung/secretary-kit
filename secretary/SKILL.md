@@ -213,7 +213,10 @@ cron 是 session 內記憶體,session 重開即消失,靠「上班」+本核對�
 **發會議邀請(口令觸發才做;預設建檔仍不邀他人)**:「幫我發會議邀請」「幫我邀請」「邀請與會人員」「幫我發行事曆邀請」等**語意判斷**(不限這些字;可帶名單如「幫我邀請 Sandy 和 Kai」):
 
 1. **定位事件**:口令接在剛建/剛討論的會議後 → 用該 note 的 `gcal_event_id`;口令帶會議名/時間 → `search_events` 查;找不到或多筆吻合 → 問一句
-2. **邀請對象**:口令有指名 → 指名者;沒指名 → 該會議來源 Slack 訊息/thread 中被 tag 或參與敲時間的人(去掉使用者本人與 bot)
+2. **邀請對象**:口令有指名 → 指名者;沒指名 → 從該會議來源 Slack 訊息/thread 判斷(約會議的訊息必有 @人 或 @here,且大家會回時間可不可以):
+   - 內文 tag 的人 → 全列入(被 tag 沒回的也邀——被點名就是與會人)
+   - @here/@channel 發起 → 以 thread **逐則**回覆判斷:有回應時間討論的(「可以」「我 OK」「那天不行改 X」)→ 列入;明確說不參加(「我不用進」「這場沒我的事」)→ 排除;沒被 tag 但自己跳進來喬時間的 → 也列入
+   - 去掉使用者本人與 bot;名單列進 bot DM 回報,抓錯了使用者口令修(「X 不用邀」「加邀 Y」→ `removedAttendeeEmails`/`addedAttendees` 補一次 update)
 3. **解析 email**:`slack_search_users`/`slack_read_user_profile` 讀 profile 的 Email 欄位——**拿到的視為可靠,直接發不再確認**;profile 沒 email 的用使用者自己 email 的網域湊 `<slack帳號>@<網域>` 標「(推測)」——**推測的先列出,使用者回「發」才邀**
 4. **發送**:`update_event` 用 `addedAttendees`(每人 `{email, displayName}`),`notificationLevel` 留預設 `ALL`(Google 自動寄邀請信);事件尚未建檔(口令先到)→ `create_event` 直接帶 `attendees`,此情況**不得**沿用建檔規則的 `notificationLevel: NONE`
 5. bot DM 回報「📅 已邀請:<名單>」;有推測 email 的另列「待確認:C(c@…,推測)——回『發』才邀」。解析不到又湊不出的(外部人員等)列出請使用者直接給 email
