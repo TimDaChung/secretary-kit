@@ -209,6 +209,14 @@ cron 是 session 內記憶體,session 重開即消失,靠「上班」+本核對�
 1. 先 `search_events` 查重;日曆已有(別人邀的)→ 不動,note 記 `on_gcal: true`
 2. 沒有 → `create_event`(使用者的主日曆):summary 前綴「[秘書] 」、description 放 Slack permalink+摘要、popup 提醒 15 分、**不加 attendees、notificationLevel: NONE**;沒講結束時間預設 1 小時。**整天事件**:startTime 給當天 08:00(+08:00)以後、endTime 隔天同時刻(給午夜會被 UTC 換算推到前一天),建完驗證回傳的 `start.date`
 3. 建好 note 記 `gcal_event_id`(防重複),bot DM 回報「📅 已建日曆:<標題><時間>」
+
+**發會議邀請(口令觸發才做;預設建檔仍不邀他人)**:「幫我發會議邀請」「幫我邀請」「邀請與會人員」「幫我發行事曆邀請」等**語意判斷**(不限這些字;可帶名單如「幫我邀請 Sandy 和 Kai」):
+
+1. **定位事件**:口令接在剛建/剛討論的會議後 → 用該 note 的 `gcal_event_id`;口令帶會議名/時間 → `search_events` 查;找不到或多筆吻合 → 問一句
+2. **邀請對象**:口令有指名 → 指名者;沒指名 → 該會議來源 Slack 訊息/thread 中被 tag 或參與敲時間的人(去掉使用者本人與 bot)
+3. **解析 email**:`slack_search_users`/`slack_read_user_profile` 讀 profile 的 Email 欄位——**拿到的視為可靠,直接發不再確認**;profile 沒 email 的用使用者自己 email 的網域湊 `<slack帳號>@<網域>` 標「(推測)」——**推測的先列出,使用者回「發」才邀**
+4. **發送**:`update_event` 用 `addedAttendees`(每人 `{email, displayName}`),`notificationLevel` 留預設 `ALL`(Google 自動寄邀請信);事件尚未建檔(口令先到)→ `create_event` 直接帶 `attendees`,此情況**不得**沿用建檔規則的 `notificationLevel: NONE`
+5. bot DM 回報「📅 已邀請:<名單>」;有推測 email 的另列「待確認:C(c@…,推測)——回『發』才邀」。解析不到又湊不出的(外部人員等)列出請使用者直接給 email
 4. 資訊不完整(只有日期、「再約」「暫定」)→ 不建,bot DM 問
 5. 後續看到改期/取消 → 用 `gcal_event_id` 更新或刪除,DM 回報
 
