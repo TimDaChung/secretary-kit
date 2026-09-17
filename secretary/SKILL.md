@@ -171,7 +171,7 @@ bot 識別:app `config.bot.app_id`,bot user `config.bot.bot_user_id`,DM 頻道 `
 
 **省量模式**:`config.schedule.profile` = "standard"(預設)/"eco"。eco 生效時:主掃描與模式掃描間隔 ×2(主掃至少 60 分)、bot DM 平時輪改增量(見 §4.4 輪型表)、**平時輪掃描 agent 降級用 Haiku**(派 agent 時 `model: "haiku"`;開工包/結算輪仍用 session 模型——大輪內容雜、誤判代價高)。覺得 Haiku 分級誤判變多 → 切回「標準模式」即恢復。P0 推播與口令回應不受影響。口令「**省量模式**」/「**標準模式**」即切換並寫回 config。**額度自動降頻**:掃描或擬稿遇到 usage/rate limit 類錯誤 → 當日臨時視同 eco 並 bot DM 告知「額度吃緊,今日已降頻」,隔天開工包恢復 config 設定值。
 
-cron 是 session 內記憶體,session 重開即消失,靠「上班」+本核對重建。此設計讓 session 重開、規則改版、模式異常殘留都在下一輪自癒。
+cron 是 session 內記憶體,session 重開即消失,靠「上班」+本核對重建。此設計讓 session 重開、規則改版、模式異常殘留都在下一輪自癒。**「上班/onduty」啟動當下 state.json 寫 `duty_started: <今天日期>`**(只在使用者/bat 啟動時寫,cron 觸發的開工包與各輪不改)——結算用它判斷值班對話是否跨日(見 daily.md)。
 
 **假日不上班**:「onduty」啟動與開工包執行時先判斷——今天是週六日,或台灣國定假日(查日曆 `zh-tw.taiwan#holiday@group.v.calendar.google.com` 當天有無事件)→ 不建任何掃描 cron,回一句「今天假日,秘書休息;要值班打『上班』」。手動「上班」= 強制值班,不受此限。
 

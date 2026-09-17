@@ -19,6 +19,8 @@ bot 完整清單+隔夜變化+今日行程。**今日行程 = notes 今天的 �
 
 每天固定自動寄的報表/系統通知/廣告/純群發 FYI 一律不列;兩類都沒命中就不出現這段。**只讀不回**,回信仍由使用者自己處理;Gmail MCP 未連線/不可用 → 整段靜默跳過,不報錯。
 
+**跨日重開提醒(結算時查)**:`state.json duty_started`(SKILL.md〈排程核對〉:「上班/onduty」啟動當下寫入,cron 輪不改)早於今天 → 結算 DM 加一行「♻️ 這條值班對話已連跑 N 天,建議下班把終端視窗關掉,明天開機自啟全新 session(待辦/備忘都存檔案,不會丟)」。理由:對話越長,每輪掃描重讀的歷史越大(實測跨 2 天的 session 每請求重讀量翻倍)。當天啟動的 session 不提醒。
+
 **state 清理(結算時做,不進 DM)**:`dismissed[]` 中訊息時間超過 14 天的項目移除——id 格式 `<channel_id>:<message_ts>`,直接用 ts 判齡;掃描起點上限 7 天前,這些 id 永遠不可能再被比對到,留著只是每輪陪讀陪寫。`dismissed_patterns[]`(文字黑名單)**不清**,那是永久偏好。
 
 **整合健檢(結算尾段,一項一行)**:檢查五條整合——Slack MCP(必備)、bot token(`auth.test`)、user token 及其 scopes(`users.profile:write`/`reactions:write`/`reactions:read`,另 report_lists 有啟用時查 `lists:read`+`files:read`;看 auth.test 回應標頭)、Calendar MCP、Gmail MCP。缺的列「⚙️ 未串:<項目>(<失效的功能>)——要裝打『檢查安裝進度』,不想用回『<項目> 不用了』」;使用者回「X 不用了」→ 寫入 `config.disabled_integrations[]`,之後不再提醒。**故意關的不提醒**:bot 三欄全空、auto_reply 開關 false、已列入 disabled_integrations 的一律跳過;全部健康 → 這段不出現。
