@@ -3,6 +3,8 @@
 ## v1.11.0 (2026-09-17)
 
 - **SKILL 拆檔省 token**:開工包/結算限定的內容(開工包組成/會前提醒排程/Gmail/整合健檢/週報/report_lists/my_todos 顯示/里程碑提醒節奏)抽到 `secretary/daily.md`,掃描 agent 平時輪只讀 SKILL.md(-16%),開工包/結算輪才加讀 daily.md。純搬移無語意變更;git pull 自動生效,無升級動作
+- **state 清理**:結算時移除 `dismissed[]` 中訊息時間超過 14 天的項目(掃描窗上限 7 天,已不可能比對到),防 state.json 隨使用月數變肥
+- **eco 模式加碼**:平時輪掃描 agent 降級用 Haiku(開工包/結算仍用 session 模型);誤判變多切回標準模式即恢復
 
 ## v1.10.0 (2026-09-17)
 
