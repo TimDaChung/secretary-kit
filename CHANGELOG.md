@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## v1.10.0 (2026-09-17)
+
+- **新功能:我的待辦(my_todos)**——口令「加待辦/看待辦/待辦完成 N/刪待辦 N」自記常駐待辦,開工包/結算顯示區塊,到期前 3 天提醒;預設開,`config.my_todos.enabled=false` 停用(Sandy 提案)
+- **新功能:Slack List 回報單掃描(report_lists,選配)**——開工包/結算彙整「指派給你本人、狀態未結案」的 List 項目;每人 List/欄位/排除狀態由安裝精靈問答偵測寫入,預設空陣列不啟用;需 user token 加 `lists:read`+`files:read`(Sandy 提案)
+- bot DM 連結固定用 `<url|連結>` 兩字藍連結格式,禁止裸 URL(自檢第 3 條同步改)
+
 ## v1.9.3 (2026-09-15)
 
 - 加「異常回報」節：秘書異常不自行改 SKILL,走 starter-kit 的 issue-triage 產標準回報;未裝 starter kit 會提醒可裝

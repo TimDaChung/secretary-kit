@@ -21,6 +21,7 @@ description: Slack 待回覆秘書(通用版)。掃描 DM + mentions + watchlist
 
 - `open[]`:待辦項 `{num, id: "<channel_id>:<message_ts>", who, where, summary, priority, first_seen, reminded, link, pending_since(選填,見流程 2 例外)}`。**`num` 為永久編號**(從 `next_num` 遞增,永不重用),銷帳/回覆指令都用它
 - `dismissed[]`(已銷 id)、`dismissed_patterns[]`(例行訊息文字黑名單,substring 比對)、`notes[]`(備忘)
+- `my_todos[]`(自記待辦,見〈我的待辦〉)與計數器 `my_todos_next`
 - `mode_scan_interval_min` 執行期覆寫值、`cron_jobs`(見各節)
 - `session_first_scan_done`:新 session 由「上班」重設為 false
 - 檔案不存在 → 以 24 小時前為掃描起點;有 `last_run` → **一律以 last_run 為起點(上限 7 天前)**——週一自然補掃週末、假期後自然補掃整段
@@ -103,7 +104,9 @@ watchlist/@here 預設:watchlist 頻道 → 至少 P1(各頻道的 `note` 註記
 - ①本輪變化:🆕 新增/⬆️ 升級/✅ 已銷/🔄 更新,一項一行(編號+級別 emoji+一句話+連結);無變化跳過此段
 - ②「── 目前全部待辦 ──」:**所有** open 項一項一行;pending 項行尾標「⏳ 你回了確認中」
 - ③近期行程(今明兩天,notes ∪ Google 日曆 `list_events` 聯集)
-- ④提醒行(備忘/暫回逾時/里程碑/催收,有才出現)
+- ③.5 report_lists 區塊(見〈Slack List 回報單掃描〉節;僅開工包/結算輪且 config.report_lists 有 enabled 項時出現)
+- ③.6 my_todos 區塊(見〈我的待辦〉節;僅開工包/結算輪且 config.my_todos.enabled 為 true、有未完成項時出現)
+- ④提醒行(備忘/暫回逾時/里程碑/催收/待辦到期,有才出現)
 
 **輪型決定段落**:
 | 輪型 | 段落 |
@@ -260,9 +263,51 @@ cron 是 session 內記憶體,session 重開即消失,靠「上班」+本核對�
 
 依性質分流:**長期資訊**(偏好/分工/慣例/人事)→ 寫 memory 系統,跨 session 永久;**時效性行程**(請假/會議/deadline/某人不在)→ state.json `notes[]`:`{text, date, num, ...}`。每輪掃描:前一天與當天的輸出提醒一行(「📌 明天 XX 請假」),過期隔天移除;notes 也供其他判斷用(如代理人請假換人)。「看備忘」→ 列全部;「刪備忘 N」→ 移除。
 
+## 我的待辦(my_todos)
+
+用途:使用者自己記的待辦清單,常駐直到標完成(有別於「記一下」的日期型備忘、待回覆、里程碑)。資料存 state.json 的 `my_todos[]`。
+
+資料結構:`my_todos[]` 每項 `{n, text, added, due(選填 ISO 日期), done(bool)}`;編號 `n` 從 state.json `my_todos_next`(缺則從 1)遞增,永不重用。與待回覆 `open[]` 的 `num` 各自獨立(「銷 N」動 open、「待辦完成 N」動 my_todos)。
+
+口令(主 session 直接處理,只動 state.json):
+- 「加待辦 <內容>」:新增一項(done=false);內容尾端若含日期(如「交報告 9/19」「下週五」)→ 解析成 due(ISO),bot 回「📝 已加待辦 #N:<內容>」
+- 「看待辦」:列出所有未完成項(編號+內容+到期)
+- 「待辦完成 N」/「待辦 N 完成」:該項 done=true(或移除),bot 回「✅ 待辦 #N 完成」
+- 「刪待辦 N」:移除該項(不算完成)
+
+顯示(§4.4 骨架 ③.6;`config.my_todos.enabled` 且本輪為開工包/結算):
+```
+【我的待辦】
+• #N <內容>［｜到期 M/D］
+```
+- 列所有 done=false 項,依 due 有無、早晚排序(無 due 排後);全部完成 → 整段不出現
+- 到期提醒:due 在今天或 3 天內的未完成待辦,在 ④提醒行加一句「⏳ 待辦 #N <內容> M/D 到期」;逾期標 🔴。開工包/結算才出現。
+
+## Slack List 回報單掃描(report_lists)
+
+用途:掃指定 Slack List,篩出**指派給本人**、且狀態未被排除的項目,在 bot DM 輸出成一個區塊(§4.4 骨架 ③.5)。List、欄位、排除狀態都因人而異,由 secretary-setup 的選配關卡問答寫入 config;`config.example.json` 預設空陣列 = 不啟用。
+
+執行條件:本輪為開工包或下班結算、且 `config.report_lists[]` 有 `enabled: true` 的項。平時輪不跑(省額度)。
+
+資料來源:Slack Web API,非 MCP。token 讀 `$SLACK_USER_TOKEN`(讀不到用 `[Environment]::GetEnvironmentVariable("SLACK_USER_TOKEN","User")`);都沒有 → 整段靜默跳過,不報錯。需該 token 具 `lists:read` + `files:read` scope(缺 → API 回 missing_scope,靜默跳過並在整合健檢提示一次)。
+
+每個 report_lists 項的處理(Bash curl):
+1. 取欄位對照:GET `files.info?file=<list_id>`,從 `file.list_metadata.schema` 建 status_col 的 option value → label 對照表
+2. 翻頁取全部項目:GET `slackLists.items.list?list_id=<list_id>&limit=100`,用 `response_metadata.next_cursor` 續頁(`&cursor=<urlencoded>`)直到無 cursor(上限 ~50 頁)
+3. 篩選(每個 item 的 `fields[]` 依 `column_id` 取值):
+   - 指派:assignee_col 那格的 `user[]` 含「本人 ID」→ 留。本人 ID = report_lists 項的 `assignee_user_id`,**空則用 `config.user.user_id`(每人 config 都是自己,不寫死任何人)**
+   - 狀態:status_col 那格的 `select[0]` 經對照表轉 label,label ∈ `exclude_status` → 丟
+4. 輸出區塊(標題用 `section_title`;無符合項則整段不出現):
+   `• <摘要>｜<狀態>｜連結`
+   - 摘要 = name_col 那格的 text;狀態 = 轉出的 label
+   - 連結 URL = `<config.workspace_url>/lists/<team_id>/<list_id>?record_id=<item.id>`(格式待實測;跳不到單筆退用整表連結),**格式依 §4.4 自檢第 3 條用 `<url|連結>` 兩字藍連結**;全形冒號規範同 §4.4 自檢
+
+注意:API 呼叫較重(每項 List 約 1 次 files.info + 數次翻頁),故只在開工包/結算跑。
+
 ## 使用者指令(編號操作)
 
 - 「銷 3」「銷 3 5 8」「3 不用回」→ 移入 `dismissed`,一句確認
+- 「加待辦 X」「看待辦」「待辦完成 N」「刪待辦 N」→ 自記待辦清單(見〈我的待辦〉節,動 `my_todos`,與「銷 N」的 open 各自獨立)
 - 「回 3」「回 3:好,下午給你」→ 秘書擬稿(有給內容照寫),確認才發
 - 「看全部」/「例行的不用列」(文案進 `dismissed_patterns`)/「我慣用的 react 是 X」(更新 `config.style.ack_emojis`)
 - 「react 3 :+1:」「按 3 讚」→ 以使用者身分對該訊息按 react:user token `POST reactions.add`(`channel`/`timestamp` 取自 item 的 id,`name`=emoji 短碼去冒號,「讚」=+1,**「確認中」「請稍候」= `config.style.pending_emojis` 第一顆**如 :loading:)。成功後:emoji 屬 `ack_emojis` → 順帶銷帳;屬 `pending_emojis` → 標 pending;其他只按不銷。回 `missing_scope` → 引導使用者:app 的 OAuth 設定 User Token Scopes 加 `reactions:write` → Reinstall → `setx SLACK_USER_TOKEN` 新 token

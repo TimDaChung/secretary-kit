@@ -149,6 +149,38 @@ setx SLACK_USER_TOKEN "xoxp-你的token"
 2. 跑一次完整掃描,產出第一份待回覆清單
 3. 教三個口令就好:**「上班」**(開自動掃描)、**「下班」**、**「銷 N」**;其餘讓他用了再學
 
+### 選配關卡:回報單掃描(Slack List)
+
+不在進度診斷 1-7 內、不擋裝機。時機:試跑通過後問一句「有沒有指派給你的 Slack List 回報單要一起盯?」,或使用者事後說「加回報單」「掃 List」時進入。**每一項都要問安裝者本人,不可沿用別人的設定值**:
+
+1. 問要不要啟用;**不要 → 寫 `report_lists: []` 跳過**
+2. 要 → 請安裝者貼 List 網址 → 從網址解析 `team_id`(T 開頭)與 `list_id`(F 開頭)
+3. 引導到自己的 Slack App → OAuth & Permissions → User Token Scopes 加 `lists:read` + `files:read` → Reinstall → 更新 `SLACK_USER_TOKEN`(token 字串沒變則免)
+4. 呼叫 `files.info?file=<list_id>` 讀 schema:
+   - `assignee_col`:自動抓 `type=todo_assignee` 的欄;有多個或抓不到 → 列欄名讓安裝者選
+   - `status_col`:列出 `type=select` 的欄與其選項,讓安裝者指認哪欄是「狀態」
+   - `name_col`:抓 `key=name`(摘要欄)
+5. 列出 status 欄的選項,問**要排除哪些狀態**(如 修復完成/列觀察)→ 寫入 `exclude_status`
+6. **指派對象預設 = 安裝者本人**(`assignee_user_id` 留空,runtime 用他自己的 `config.user.user_id`);只有要看別人的才填
+7. 寫入 `config.report_lists`,試跑一次確認能撈到。寫入結構(值為佔位範例):
+
+```json
+"report_lists": [
+  {
+    "enabled": true,
+    "section_title": "【回報單待處理】",
+    "list_id": "F0XXXXXXXXX",
+    "team_id": "T0XXXXXXXXX",
+    "assignee_col": "ColXX",
+    "status_col": "ColXX",
+    "name_col": "ColXX",
+    "assignee_user_id": "",
+    "exclude_status": ["修復完成", "列觀察"],
+    "show_in": ["morning", "evening"]
+  }
+]
+```
+
 ## 原則
 
 - 一關驗證通過才給下一關;使用者跳著問也先跑診斷對齊現況

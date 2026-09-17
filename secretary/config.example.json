@@ -74,6 +74,14 @@
     ],
     "pending_timeout_hours": 4
   },
+  "my_todos": {
+    "_comment": "自記待辦清單(口令「加待辦/看待辦/待辦完成 N」)。enabled=false 完全停用;show_in 控制在哪些輪型顯示(morning=開工包/evening=下班結算)。",
+    "enabled": true,
+    "section_title": "【我的待辦】",
+    "show_in": ["morning", "evening"]
+  },
+  "report_lists": [],
+  "_comment_report_lists": "Slack List 回報單掃描(選配,預設不啟用)。每人 List/欄位/排除狀態都不同,由 secretary-setup 的「回報單掃描」選配關卡問答偵測後寫入,不要手抄別人的設定;需 user token 加 lists:read + files:read scope。",
   "auto_reply_config": {
     "_comment": "狀態自動回覆開關,兩者獨立。false = 只切狀態不自動回覆。",
     "meeting": true,
