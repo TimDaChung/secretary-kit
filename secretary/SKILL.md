@@ -34,7 +34,7 @@ ack emoji 清單讀 `config.style.ack_emojis`;muted 清單讀 `config.muted_chan
 
 每輪掃描(含開工包、下班結算)主 session **不自己跑下面 1~5 節**,改派一個 general-purpose subagent 執行,prompt 自包含,要點:
 
-> 讀 `~/.claude/skills/secretary/SKILL.md` **整份**(「排程核對」節除外——cron 歸主 session 管)與同目錄 `config.json`、`state.json`,執行完整掃描(含 bot DM 發送;開工包/結算輪含該節加碼項),結果寫回 `state.json`,回傳兩段:(a) 新增/變化項摘要 ≤15 行(編號+一句話) (b) 需主 session 排 cron 的事項清單——**每個今日行程回報成對兩顆:會前提醒＋會議開始切狀態**(prompt 寫法各節有定義),另含模式結束補掃等。
+> 讀 `~/.claude/skills/secretary/SKILL.md` **整份**(「排程核對」節除外——cron 歸主 session 管)與同目錄 `config.json`、`state.json`;**本輪是開工包或下班結算 → 加讀同目錄 `daily.md`**(兩大輪的加碼項與專屬區塊;平時輪不讀,省 token)。執行完整掃描(含 bot DM 發送),結果寫回 `state.json`,回傳兩段:(a) 新增/變化項摘要 ≤15 行(編號+一句話) (b) 需主 session 排 cron 的事項清單——**每個今日行程回報成對兩顆:會前提醒＋會議開始切狀態**(prompt 寫法各節有定義),另含模式結束補掃等。
 
 主 session 每輪只做:**排程核對(cron 只能在主 session 建/刪)→ 派 agent → 讀回摘要 → 補排 cron → 顯示摘要給使用者**。Slack 搜尋結果與頻道內容**絕不進主 session context**——這是本設計的目的,使 session 全天保持輕量、不觸發壓縮。
 
@@ -104,14 +104,14 @@ watchlist/@here 預設:watchlist 頻道 → 至少 P1(各頻道的 `note` 註記
 - ①本輪變化:🆕 新增/⬆️ 升級/✅ 已銷/🔄 更新,一項一行(編號+級別 emoji+一句話+連結);無變化跳過此段
 - ②「── 目前全部待辦 ──」:**所有** open 項一項一行;pending 項行尾標「⏳ 你回了確認中」
 - ③近期行程(今明兩天,notes ∪ Google 日曆 `list_events` 聯集)
-- ③.5 report_lists 區塊(見〈Slack List 回報單掃描〉節;僅開工包/結算輪且 config.report_lists 有 enabled 項時出現)
-- ③.6 my_todos 區塊(見〈我的待辦〉節;僅開工包/結算輪且 config.my_todos.enabled 為 true、有未完成項時出現)
+- ③.5 report_lists 區塊(見 daily.md;僅開工包/結算輪且 config.report_lists 有 enabled 項時出現)
+- ③.6 my_todos 區塊(見 daily.md;僅開工包/結算輪且 config.my_todos.enabled 為 true、有未完成項時出現)
 - ④提醒行(備忘/暫回逾時/里程碑/催收/待辦到期,有才出現)
 
 **輪型決定段落**:
 | 輪型 | 段落 |
 |---|---|
-| 開工包/下班結算 | ①②③④ 全上+各自加碼項(見〈每日節奏〉) |
+| 開工包/下班結算 | ①②③④ 全上+各自加碼項(見 daily.md) |
 | 平時輪(standard) | ①②④——**② 每輪必列完整,禁用「另掛 N 項說看全部」**(2026-09-10 17:16 違規簡化過一次:少列=使用者漏事);③ 不列 |
 | 平時輪(eco) | ①④+一行「另掛 N 項(#3 #5)」——唯一允許增量的情境 |
 
@@ -174,17 +174,10 @@ cron 是 session 內記憶體,session 重開即消失,靠「上班」+本核對�
 
 ## 每日節奏
 
-1. **晨間開工包**(`config.schedule.morning_time`):bot 完整清單+隔夜變化+今日行程。**今日行程 = notes 今天的 ∪ Google 日曆今天的 events**(`list_events`,含週期事件如每週固定會議);會前提醒與切狀態 cron 以聯集排,重複的只排一次。**撞期偵測**:行程聯集內時間重疊的,行程段頂部標「⚠️ 撞期:<場次A> × <場次B>」,取捨由使用者決定,秘書不代決;**當天是請假日**(notes 有 auto_status)→ 行程段改標「🌴 請假日但有 N 場行程」並逐一列出,問要改期/取消/照開。「上班」在上班時間後才喊 → 第一掃直接當開工包
-2. **下班結算**(`config.schedule.evening_time`):完整 open 清單+今天新答應的事、還沒回的、明天第一件事;**週五加碼**本週 dismissed 大事清單(週報素材)。結算後主掃描停(排程核對自然達成),bot DM 末尾提「已下班,晚間有事在終端打『上班』」+**當日運轉摘要一行**(掃描 N 輪、發 DM N 則、自動回覆 N 則——當日輪數記在 state.json `today_stats`,開工包歸零)
-   - **Gmail 信箱檢查(每天只在結算做這一次)**:`mcp__claude_ai_Gmail__search_threads` query `in:inbox newer_than:<N>d -category:promotions -category:social -category:updates`,N = 距上次成功檢查的天數(state.json `last_mail_check`,本次跑完寫回今天;缺值=3——新裝或首次啟用自然回補近期積壓;上限 7)——週一補掃週末、假期後補掃整段。結算 DM 的「📧 信箱」段分兩類列(**疑似釣魚不列**——公司天天有,MIS 自會提醒):
-     - **要行動/有期限**:回覆時限、活動報名、考核/評核、會議邀請、表單填寫、「請於 X 日前」句型。**出勤類簽核(加班/請假/補卡)不列**——公司另有系統管;期限 3 天內的同時寫進 notes(到期前照備忘提醒)
-     - **值得知道(FYI,不寫 notes)**:主管/HR/財務/法務等重要來源的非例行信、與使用者負責產品直接相關的非例行信(如平台審核結果、上架/發佈通知)
-   
-   每天固定自動寄的報表/系統通知/廣告/純群發 FYI 一律不列;兩類都沒命中就不出現這段。**只讀不回**,回信仍由使用者自己處理;Gmail MCP 未連線/不可用 → 整段靜默跳過,不報錯
-   - **整合健檢(結算尾段,一項一行)**:檢查五條整合——Slack MCP(必備)、bot token(`auth.test`)、user token 及其 scopes(`users.profile:write`/`reactions:write`,看 auth.test 回應標頭)、Calendar MCP、Gmail MCP。缺的列「⚙️ 未串:<項目>(<失效的功能>)——要裝打『檢查安裝進度』,不想用回『<項目> 不用了』」;使用者回「X 不用了」→ 寫入 `config.disabled_integrations[]`,之後不再提醒。**故意關的不提醒**:bot 三欄全空、auto_reply 開關 false、已列入 disabled_integrations 的一律跳過;全部健康 → 這段不出現
-3. **會前 15 分提醒**:今日每個行程排一次性 cron(開始前 15 分),prompt「bot 提醒使用者:<行程>」。**成對鐵則:每排一顆會前提醒,必同排同行程的「會議開始」切狀態 cron**(做法見〈會議狀態自動切換〉)——只排提醒沒排切狀態 = 漏排(2026-09-11 兩場會議均因此沒自動切狀態)
-4. **中途新增的當天行程補提醒**:每輪掃描檢查 notes 與當日日曆(與 §4.4 ③ 共用同一次 `list_events`),「今天、有開始時間、>現在+15 分、未排提醒」的補排(**同樣成對:提醒+切狀態兩顆**),note 標 `reminder_scheduled: true`;15 分內開始的立刻 bot DM 提醒+照常排開始時間的切狀態 cron;**已開始但未結束的 → 立刻提醒+當場執行切狀態(至結束時間),不排 cron**。補排時比對當日既有行程,**時間重疊 → 提醒訊息加「⚠️ 與 <場次> 撞期」**
-5. **預約請假**(「我 X 月 X 日請假」):記 note 帶 `auto_status`(`sick_fullday`/`leave_am`/自訂到幾點)。當天開工包或第一輪掃描執行:設狀態(病假=🤒+代理人後綴,整天 expiration=23:59,半天=指定時點)、進請假模式,標 `status_switched: true`。**預約時就提醒使用者:當天電腦要開著才會執行**;代理人同日也請假(查 notes)→ 換點別人。**預約當下順手查該日 Google 日曆**(`list_events`):有會議/行程 → bot DM 列出「你 X/X 請假,當天有:...」問要改期/取消/照開——取捨由使用者決定;要秘書代改期/刪除,僅限「[秘書] 」前綴的事件(用 `gcal_event_id`),別人邀的只能提醒使用者自己處理
+開工包/下班結算的組成、會前 15 分提醒排程、Gmail 信箱檢查、整合健檢、週五週報、report_lists 與 my_todos 顯示區塊、里程碑提醒節奏 → **全部見同目錄 `daily.md`**(只在開工包/結算輪讀取)。以下兩項**每輪掃描**都要做:
+
+1. **中途新增的當天行程補提醒**:每輪掃描檢查 notes 與當日日曆(與 §4.4 ③ 共用同一次 `list_events`),「今天、有開始時間、>現在+15 分、未排提醒」的補排(**同樣成對:提醒+切狀態兩顆**),note 標 `reminder_scheduled: true`;15 分內開始的立刻 bot DM 提醒+照常排開始時間的切狀態 cron;**已開始但未結束的 → 立刻提醒+當場執行切狀態(至結束時間),不排 cron**。補排時比對當日既有行程,**時間重疊 → 提醒訊息加「⚠️ 與 <場次> 撞期」**
+2. **預約請假**(「我 X 月 X 日請假」):記 note 帶 `auto_status`(`sick_fullday`/`leave_am`/自訂到幾點)。當天開工包或第一輪掃描執行:設狀態(病假=🤒+代理人後綴,整天 expiration=23:59,半天=指定時點)、進請假模式,標 `status_switched: true`。**預約時就提醒使用者:當天電腦要開著才會執行**;代理人同日也請假(查 notes)→ 換點別人。**預約當下順手查該日 Google 日曆**(`list_events`):有會議/行程 → bot DM 列出「你 X/X 請假,當天有:...」問要改期/取消/照開——取捨由使用者決定;要秘書代改期/刪除,僅限「[秘書] 」前綴的事件(用 `gcal_event_id`),別人邀的只能提醒使用者自己處理
 
 ## 會議同步 Google 日曆
 
@@ -223,12 +216,7 @@ cron 是 session 內記憶體,session 重開即消失,靠「上班」+本核對�
 - 「<專案> 美術完成」→ status done(提前完成照記)
 - 「看專案 <名>」/「看所有專案」→ 全貌(里程碑、日期、狀態、相鄰間距);「刪專案 <名>」
 
-**提醒節奏(只在開工包與下班結算出現,絕不進主掃描——平時完全沉默)**:
-- 距里程碑 >7 天:不提
-- T-7:開工包首次浮出一行;T-3、T-1、當天:開工包+結算連續列,當天標 🔴
-- 週一開工包附「本週里程碑」彙總一行
-- **逾期追認**:日期過了未標完成 → 每天結算問一句「<專案> <里程碑>完成了嗎?」(note 標 `asked`+1),連 2 天無回應建 P1 追蹤項
-- **連鎖檢查(改期或逾期時)**:重算該案後續里程碑的間距,比原間距壓縮 → 提示「<下游里程碑>只剩 N 天(原 M 天),要連動調整嗎?」。**秘書只提示,不自動改任何日期**
+**提醒節奏**:只在開工包與下班結算出現,絕不進主掃描——平時完全沉默;細節見 daily.md〈專案里程碑提醒節奏〉。
 
 **刻意不做**:不建 Google 日曆事件(里程碑非會議,防日曆爆炸)、不做跨人指派(note 可註 owner 當備忘)、不畫甘特圖。
 
@@ -283,34 +271,11 @@ cron 是 session 內記憶體,session 重開即消失,靠「上班」+本核對�
 
 自動銷帳:掃描中**明確看到該事已完成**(如待辦是「回覆某人」而使用者已在該對話發出實質回覆)→ 自動標 done,bot DM ①段告知「✅ 待辦 #N 已完成,自動銷帳」;只憑推測不銷,寧可多問。
 
-顯示(§4.4 骨架 ③.6;`config.my_todos.enabled` 且本輪為開工包/結算):
-```
-【我的待辦】
-• #N <內容>［｜到期 M/D］
-```
-- 列所有 done=false 項,依 due 有無、早晚排序(無 due 排後);全部完成 → 整段不出現
-- 到期提醒:due 在今天或 3 天內的未完成待辦,在 ④提醒行加一句「⏳ 待辦 #N <內容> M/D 到期」;逾期標 🔴。開工包/結算才出現。
+顯示(§4.4 骨架 ③.6,僅開工包/結算):格式與到期提醒規則見 daily.md〈我的待辦顯示〉。
 
 ## Slack List 回報單掃描(report_lists)
 
-用途:掃指定 Slack List,篩出**指派給本人**、且狀態未被排除的項目,在 bot DM 輸出成一個區塊(§4.4 骨架 ③.5)。List、欄位、排除狀態都因人而異,由 secretary-setup 的選配關卡問答寫入 config;`config.example.json` 預設空陣列 = 不啟用。
-
-執行條件:本輪為開工包或下班結算、且 `config.report_lists[]` 有 `enabled: true` 的項。平時輪不跑(省額度)。
-
-資料來源:Slack Web API,非 MCP。token 讀 `$SLACK_USER_TOKEN`(讀不到用 `[Environment]::GetEnvironmentVariable("SLACK_USER_TOKEN","User")`);都沒有 → 整段靜默跳過,不報錯。需該 token 具 `lists:read` + `files:read` scope(缺 → API 回 missing_scope,靜默跳過並在整合健檢提示一次)。
-
-每個 report_lists 項的處理(Bash curl):
-1. 取欄位對照:GET `files.info?file=<list_id>`,從 `file.list_metadata.schema` 建 status_col 的 option value → label 對照表
-2. 翻頁取全部項目:GET `slackLists.items.list?list_id=<list_id>&limit=100`,用 `response_metadata.next_cursor` 續頁(`&cursor=<urlencoded>`)直到無 cursor(上限 ~50 頁)
-3. 篩選(每個 item 的 `fields[]` 依 `column_id` 取值):
-   - 指派:assignee_col 那格的 `user[]` 含「本人 ID」→ 留。本人 ID = report_lists 項的 `assignee_user_id`,**空則用 `config.user.user_id`(每人 config 都是自己,不寫死任何人)**。**多欄指派**:config 也可給 `assignee_cols`(陣列,如受託人+pm 兩欄)取代 `assignee_col`,任一欄含本人即留
-   - 狀態:status_col 那格的 `select[0]` 經對照表轉 label,label ∈ `exclude_status` → 丟
-4. 輸出區塊(標題用 `section_title`;無符合項則整段不出現):
-   `• <摘要>｜<狀態>｜連結`
-   - 摘要 = name_col 那格的 text;狀態 = 轉出的 label
-   - 連結 URL = `<config.workspace_url>/lists/<team_id>/<list_id>?record_id=<item.id>`(格式待實測;跳不到單筆退用整表連結),**格式依 §4.4 自檢第 3 條用 `<url|連結>` 兩字藍連結**;全形冒號規範同 §4.4 自檢
-
-注意:API 呼叫較重(每項 List 約 1 次 files.info + 數次翻頁),故只在開工包/結算跑。
+只在開工包/結算跑,完整規範見 daily.md〈Slack List 回報單掃描〉;設定由 secretary-setup 選配關卡寫入 `config.report_lists[]`(預設空 = 不啟用)。
 
 ## 使用者指令(編號操作)
 

@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## v1.11.0 (2026-09-17)
+
+- **SKILL 拆檔省 token**:開工包/結算限定的內容(開工包組成/會前提醒排程/Gmail/整合健檢/週報/report_lists/my_todos 顯示/里程碑提醒節奏)抽到 `secretary/daily.md`,掃描 agent 平時輪只讀 SKILL.md(-16%),開工包/結算輪才加讀 daily.md。純搬移無語意變更;git pull 自動生效,無升級動作
+
 ## v1.10.0 (2026-09-17)
 
 - **新功能:我的待辦(my_todos)**——口令「加待辦/看待辦/待辦完成 N/刪待辦 N」自記常駐待辦,開工包/結算顯示區塊,到期前 3 天提醒;預設開,`config.my_todos.enabled=false` 停用(Sandy 提案)
