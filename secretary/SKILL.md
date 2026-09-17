@@ -303,7 +303,7 @@ cron 是 session 內記憶體,session 重開即消失,靠「上班」+本核對�
 1. 取欄位對照:GET `files.info?file=<list_id>`,從 `file.list_metadata.schema` 建 status_col 的 option value → label 對照表
 2. 翻頁取全部項目:GET `slackLists.items.list?list_id=<list_id>&limit=100`,用 `response_metadata.next_cursor` 續頁(`&cursor=<urlencoded>`)直到無 cursor(上限 ~50 頁)
 3. 篩選(每個 item 的 `fields[]` 依 `column_id` 取值):
-   - 指派:assignee_col 那格的 `user[]` 含「本人 ID」→ 留。本人 ID = report_lists 項的 `assignee_user_id`,**空則用 `config.user.user_id`(每人 config 都是自己,不寫死任何人)**
+   - 指派:assignee_col 那格的 `user[]` 含「本人 ID」→ 留。本人 ID = report_lists 項的 `assignee_user_id`,**空則用 `config.user.user_id`(每人 config 都是自己,不寫死任何人)**。**多欄指派**:config 也可給 `assignee_cols`(陣列,如受託人+pm 兩欄)取代 `assignee_col`,任一欄含本人即留
    - 狀態:status_col 那格的 `select[0]` 經對照表轉 label,label ∈ `exclude_status` → 丟
 4. 輸出區塊(標題用 `section_title`;無符合項則整段不出現):
    `• <摘要>｜<狀態>｜連結`
