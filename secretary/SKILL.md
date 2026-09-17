@@ -50,7 +50,7 @@ ack emoji 清單讀 `config.style.ack_emojis`;muted 清單讀 `config.muted_chan
 3. **watchlist(有新訊息就報,不限點名)**:逐一 `slack_read_channel`(`oldest=<last_run>`),頻道清單 = `config.watchlist[]`(每項 `{id, name, note}`,`note` 是分級參考註記)。使用者自己發的略過;同話題連續訊息合併成一項
 4. **全 workspace @here/@channel**:search query `here`(**不加引號**,加引號搜不到),`only_my_channels=true`、`after`、`sort=timestamp`,只留原文含 `<!here>`/`<!channel>` 的;使用者自己發的略過
 5. **Bot DM 指令通道**(bot 有設定才跑):`slack_read_channel`(`config.bot.dm_channel_id`)。**使用者在裡面發的訊息 = 秘書指令**(「銷 N」「記一下」「看全部」「回 N」等口令與終端相同),執行後 bot 回一句確認(「✅ #12 已銷」)。bot 自己的訊息略過;非指令留言存進對應 item 備註或回覆收到
-6. **React 銷帳**(`open[]` 為空 → 本節含 pending 搜尋整段跳過):對 `config.style.ack_emojis` 每顆搜 `to:me hasmy::<emoji>:`(`after`=最舊 open 的 first_seen),命中 = 使用者已處理,自動銷帳。帶膚色要搜 `:+1::skin-tone-N:` 完整寫法。**pending emoji 不銷帳**:對 `config.style.pending_emojis` 同法逐顆搜 `hasmy:`,命中 = 使用者回了「確認中」的 react → 不銷帳,item 標 `pending_since`(見第 2 節例外)
+6. **React 銷帳**(`open[]` 為空 → 本節含 pending 搜尋整段跳過):對 `config.style.ack_emojis` 每顆搜 `hasmy::<emoji>:`(**不加 `to:me`**——`to:me` 只涵蓋 DM/@提及,watchlist、@here、純頻道貼文來源的項目會漏銷;`after`=最舊 open 的 first_seen),命中結果比對 `open[]` 的 `<channel>:<ts>`,對得上 = 使用者已處理,自動銷帳(對不上的命中忽略)。帶膚色要搜 `:+1::skin-tone-N:` 完整寫法。**pending emoji 不銷帳**:對 `config.style.pending_emojis` 同法逐顆搜 `hasmy:`,命中 = 使用者回了「確認中」的 react → 不銷帳,item 標 `pending_since`(見第 2 節例外)
 
 ### 1.5 承諾偵測(掃使用者自己的訊息)
 
@@ -78,7 +78,7 @@ ack emoji 清單讀 `config.style.ack_emojis`;muted 清單讀 `config.muted_chan
 
 **每輪更新**(每個追蹤項約 2 次查詢;判定標準 = **完成**,不是有回應就算):
 1. react 判定:user token GET `reactions.get?channel=<channel_id>&timestamp=<ts>&full=true`,**只有按了 `config.style.rollcall_done_emojis` 白名單內 emoji**(預設 `收到`、`done`)的 users 才併入 responded;其他 emoji(😂👀 等)不算。回 missing_scope(缺 `reactions:read`)→ 本路靜默跳過只靠 thread 判定,整合健檢提示一次
-2. thread 判定:`slack_read_thread`,expected 成員在 thread 的發言**看內容語意判斷**——明確表示完成/照辦(「改好了」「已更新」「done」「沒問題,已處理」)→ 併入 responded;含糊或只是知悉(「收到,晚點看」「好」「?」)→ **不算完成**,清單該項附註「(A 已回但未確認完成)」;判斷不出 → 當未完成附註處理,寧可多追
+2. thread 判定:`slack_read_thread`,expected 成員在 thread 的發言**逐則看內容語意判斷**(不對整串下整體結論)——明確表示完成/照辦(「改好了」「已更新」「done」「沒問題,已處理」)→ 併入 responded;含糊或只是知悉(「收到,晚點看」「好」「?」)→ **不算完成**,清單該項附註「(A 已回但未確認完成)」;判斷不出 → 當未完成附註處理,寧可多追
 3. **全到齊 → 自動銷**,bot DM ①段「✅ 點名 #N <摘要> 全員已回」
 4. 未到齊 → ② 清單尾列一行:「#N 📩 點名追蹤|<摘要>|已完成 x/y,未完成:<名字們>|連結」(有「已回但未確認完成」的在該名字後括註)
 5. 建立超過 2 天且本輪無新增回覆 → ④ 提醒一次「📩 #N 還有 <名單> 沒回,要催嗎?(回 N 可擬催稿)」(reminded+1,不重複轟炸)
@@ -87,7 +87,9 @@ ack emoji 清單讀 `config.style.ack_emojis`;muted 清單讀 `config.muted_chan
 
 ### 2. 判斷待回覆
 
-依對話(DM/群組 DM/channel+thread)分組。最後一則候選之後使用者在**同一對話/thread**有發言 → 視為已回,整組剔除;歸屬不明才用 `slack_read_thread` 補查,能省則省。
+依對話(DM/群組 DM/channel+thread)分組。最後一則候選之後使用者在**同一對話/thread**有發言 → 視為已回,整組剔除——這是**機械規則,不對發言內容做語意過濾**:夾在大量閒聊中的一句短回應(「額我找一下」)也算發言,不因對話整體像閒聊就判未回;唯一例外 = 下方「確認中」暫回。歸屬不明才用 `slack_read_thread` 補查,能省則省。
+
+**逐則檢視,不整段下結論**:凡需要語意判斷的場合(跨層回覆、點名追蹤 thread 判定等),訊息量大或內容混雜時**逐則**比對每一則發言是否構成回應,禁止對整段對話下「都是閒聊」的整體結論;拿不準 → 備註保留(附原文前 20 字),不判未回。
 
 **跨層回覆判斷**:候選訊息在 thread、使用者之後在**同頻道主流**發言(或反過來:候選在主流、回在某 thread)→ 不能只看同層。讀該發言內容判斷是否在回應此事:明顯對應(「可以」「收到」「時間再跟我說」等接續語意)→ 視為已回銷掉;判斷不出 → item 保留但備註「你在頻道回了:『<前 20 字>』,若即此事請銷」,且該輪不累計第 N 次提醒。
 
