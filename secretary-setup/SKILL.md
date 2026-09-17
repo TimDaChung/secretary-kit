@@ -101,6 +101,8 @@ oauth_config:
       - users.profile:read
       - reactions:write
       - chat:write
+      - lists:read
+      - files:read
 settings:
   org_deploy_enabled: false
   socket_mode_enabled: false
@@ -155,7 +157,9 @@ setx SLACK_USER_TOKEN "xoxp-你的token"
 
 1. 問要不要啟用;**不要 → 寫 `report_lists: []` 跳過**
 2. 要 → 請安裝者貼 List 網址 → 從網址解析 `team_id`(T 開頭)與 `list_id`(F 開頭)
-3. 引導到自己的 Slack App → OAuth & Permissions → User Token Scopes 加 `lists:read` + `files:read` → Reinstall → 更新 `SLACK_USER_TOKEN`(token 字串沒變則免)
+3. **先驗 scope 再說**:用 user token 打一次 `files.info?file=<list_id>`——成功 = scope 已有(v1.10 後新裝的 manifest 內建),直接跳步驟 4;回 `missing_scope` = 舊裝機要補,走雙路線(同關卡 2 慣例):
+   - **A. 自動**(有 Claude in Chrome):精靈代開該 App 的 OAuth & Permissions → 代加 User Token Scopes `lists:read` + `files:read` → 代按 Reinstall → **授權頁請使用者本人按 Allow** → 代讀新 token,字串有變就代跑 setx 並提醒重開終端
+   - **B. 手動**:引導使用者自己到 OAuth & Permissions → User Token Scopes 加兩個 scope → Reinstall to Workspace → 更新 `SLACK_USER_TOKEN`(token 字串沒變則免)
 4. 呼叫 `files.info?file=<list_id>` 讀 schema:
    - `assignee_col`:自動抓 `type=todo_assignee` 的欄;有多個或抓不到 → 列欄名讓安裝者選
    - `status_col`:列出 `type=select` 的欄與其選項,讓安裝者指認哪欄是「狀態」

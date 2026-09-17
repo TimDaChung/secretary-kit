@@ -4,6 +4,8 @@
 
 - **新功能:我的待辦(my_todos)**——口令「加待辦/看待辦/待辦完成 N/刪待辦 N」自記常駐待辦,開工包/結算顯示區塊,到期前 3 天提醒;預設開,`config.my_todos.enabled=false` 停用(Sandy 提案)
 - **新功能:Slack List 回報單掃描(report_lists,選配)**——開工包/結算彙整「指派給你本人、狀態未結案」的 List 項目;每人 List/欄位/排除狀態由安裝精靈問答偵測寫入,預設空陣列不啟用;需 user token 加 `lists:read`+`files:read`(Sandy 提案)
+- **「記一下」與待辦合併為單一入口**——要做的事不分有無時程一律進待辦、追到完成才消(含秘書明確看到已完成的自動銷帳);純事件記錄(請假/會議)仍過期自清(Tim 拍板)
+- manifest user scopes 內建 `lists:read`+`files:read`(新裝機免二次 reinstall);回報單選配關卡先驗 scope,舊裝機才走補 scope 雙路線(自動代操作/手動)
 - bot DM 連結固定用 `<url|連結>` 兩字藍連結格式,禁止裸 URL(自檢第 3 條同步改)
 
 ## v1.9.3 (2026-09-15)
