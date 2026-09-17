@@ -100,6 +100,7 @@ oauth_config:
       - users.profile:write
       - users.profile:read
       - reactions:write
+      - reactions:read
       - chat:write
       - lists:read
       - files:read

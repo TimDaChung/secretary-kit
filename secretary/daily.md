@@ -21,7 +21,7 @@ bot 完整清單+隔夜變化+今日行程。**今日行程 = notes 今天的 �
 
 **state 清理(結算時做,不進 DM)**:`dismissed[]` 中訊息時間超過 14 天的項目移除——id 格式 `<channel_id>:<message_ts>`,直接用 ts 判齡;掃描起點上限 7 天前,這些 id 永遠不可能再被比對到,留著只是每輪陪讀陪寫。`dismissed_patterns[]`(文字黑名單)**不清**,那是永久偏好。
 
-**整合健檢(結算尾段,一項一行)**:檢查五條整合——Slack MCP(必備)、bot token(`auth.test`)、user token 及其 scopes(`users.profile:write`/`reactions:write`,看 auth.test 回應標頭)、Calendar MCP、Gmail MCP。缺的列「⚙️ 未串:<項目>(<失效的功能>)——要裝打『檢查安裝進度』,不想用回『<項目> 不用了』」;使用者回「X 不用了」→ 寫入 `config.disabled_integrations[]`,之後不再提醒。**故意關的不提醒**:bot 三欄全空、auto_reply 開關 false、已列入 disabled_integrations 的一律跳過;全部健康 → 這段不出現。
+**整合健檢(結算尾段,一項一行)**:檢查五條整合——Slack MCP(必備)、bot token(`auth.test`)、user token 及其 scopes(`users.profile:write`/`reactions:write`/`reactions:read`,另 report_lists 有啟用時查 `lists:read`+`files:read`;看 auth.test 回應標頭)、Calendar MCP、Gmail MCP。缺的列「⚙️ 未串:<項目>(<失效的功能>)——要裝打『檢查安裝進度』,不想用回『<項目> 不用了』」;使用者回「X 不用了」→ 寫入 `config.disabled_integrations[]`,之後不再提醒。**故意關的不提醒**:bot 三欄全空、auto_reply 開關 false、已列入 disabled_integrations 的一律跳過;全部健康 → 這段不出現。
 
 ## Slack List 回報單掃描(report_lists,骨架 ③.5)
 

@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## v1.12.0 (2026-09-17)
+
+- **新功能:點名回覆追蹤(roll_calls)**——你發「請大家回覆/按 done」的訊息(含 tag),秘書自動偵測並問要不要追(確認制);追蹤中每輪比對 react+thread 回覆,清單列「已回 x/y,未回:名單」,全到齊自動銷,2 天無進展提醒催。口令:「追這則 <連結>」「誰沒回 N」「停追 N」
+- manifest user scopes 補 `reactions:read`(react 判定用;缺時退化為只看 thread 回覆,功能不中斷)
+
+⚙️ 升級動作(AI 自動執行,冪等):
+1. 驗 user token 有無 `reactions:read`(打一次 `reactions.get` 或看 auth.test scopes):有 → 跳過;缺 → 問「點名追蹤的 react 判定需要補 reactions:read scope,要現在補嗎?」——要 → 走關卡 2 雙路線(自動代操作/手動)加 scope + Reinstall;不要 → 告知「react 判定退化為只看 thread 回覆,之後想補說『補 scope』」
+2. state.json 寫 `kit_version: "1.12.0"`
+
 ## v1.11.0 (2026-09-17)
 
 - **SKILL 拆檔省 token**:開工包/結算限定的內容(開工包組成/會前提醒排程/Gmail/整合健檢/週報/report_lists/my_todos 顯示/里程碑提醒節奏)抽到 `secretary/daily.md`,掃描 agent 平時輪只讀 SKILL.md(-16%),開工包/結算輪才加讀 daily.md。純搬移無語意變更;git pull 自動生效,無升級動作

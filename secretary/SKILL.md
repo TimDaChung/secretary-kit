@@ -22,6 +22,7 @@ description: Slack 待回覆秘書(通用版)。掃描 DM + mentions + watchlist
 - `open[]`:待辦項 `{num, id: "<channel_id>:<message_ts>", who, where, summary, priority, first_seen, reminded, link, pending_since(選填,見流程 2 例外)}`。**`num` 為永久編號**(從 `next_num` 遞增,永不重用),銷帳/回覆指令都用它
 - `dismissed[]`(已銷 id)、`dismissed_patterns[]`(例行訊息文字黑名單,substring 比對)、`notes[]`(備忘)
 - `my_todos[]`(自記待辦,見〈我的待辦〉)與計數器 `my_todos_next`
+- `roll_calls[]`(點名回覆追蹤,見流程 1.7;`num` 與 open[] 共用 `next_num`)
 - `mode_scan_interval_min` 執行期覆寫值、`cron_jobs`(見各節)
 - `session_first_scan_done`:新 session 由「上班」重設為 false
 - 檔案不存在 → 以 24 小時前為掃描起點;有 `last_run` → **一律以 last_run 為起點(上限 7 天前)**——週一自然補掃週末、假期後自然補掃整段
@@ -64,6 +65,25 @@ ack emoji 清單讀 `config.style.ack_emojis`;muted 清單讀 `config.muted_chan
   - **對外**(要以使用者名義回覆、發訊、對他人做動作)→ **擬好不發**:存 notes 標 `type: task`+建 P1 追蹤項「你交辦秘書:<摘要>(含原訊息連結)」,bot 回「📋 已擬好:XXX——回『發』或在終端確認才送出」。理由:對外內容不可預測、訊息串他人內容可能影響擬稿,需使用者把關
   - 分不清對內對外(「處理一下」)→ 當對外處理,bot DM 問一句
 
+### 1.7 點名回覆追蹤(掃使用者自己的訊息)
+
+追「你發出的請大家回覆/按 done」訊息,比對誰還沒回。
+
+**偵測(自動,確認制)**:`from:` 結果中,你自己的訊息同時滿足 (a) 請回句型——「請大家/麻煩各位/各位…回覆/回個/按 done/按 ✅/確認一下」等**語意判斷**(不限這些字) (b) 內文 tag ≥1 人(`<@U…>`)→ 候選,bot DM 問「📩 要追這則的回覆嗎?應回 N 人:<名單>——回『追』開始」;同一 ts 只問一次(state 記 `asked_ts[]`)。誤抓的句型使用者會回饋修正。
+
+**手動**:「追這則 <連結>」(終端或 bot DM)→ 直接建;訊息沒 tag 人 → 問應回名單。在 Slack 對著該訊息喊「秘書追回覆」(走 1.6 委派型)同效。
+
+**資料**:`roll_calls[]`:`{num, id: "<channel_id>:<message_ts>", summary, expected[], responded[], created, reminded, link}`;`num` 與 open[] **共用 `next_num`**(全域唯一,不另開第三套編號)。expected = 訊息內 tag 名單,去掉使用者本人與 bot。
+
+**每輪更新**(每個追蹤項約 2 次查詢):
+1. react 判定:user token GET `reactions.get?channel=<channel_id>&timestamp=<ts>&full=true`,各 react 的 `users` 併入 responded(任何 emoji 都算——按 done 習慣多為 react;回 missing_scope(缺 `reactions:read`)→ 本路靜默跳過只靠 thread 判定,整合健檢提示一次)
+2. thread 判定:`slack_read_thread`,在該 thread 發言的 expected 成員併入 responded
+3. **全到齊 → 自動銷**,bot DM ①段「✅ 點名 #N <摘要> 全員已回」
+4. 未到齊 → ② 清單尾列一行:「#N 📩 點名追蹤|<摘要>|已回 x/y,未回:<名字們>|連結」
+5. 建立超過 2 天且本輪無新增回覆 → ④ 提醒一次「📩 #N 還有 <名單> 沒回,要催嗎?(回 N 可擬催稿)」(reminded+1,不重複轟炸)
+
+**口令**:「誰沒回 N」→ 列已回/未回名單;「停追 N」「N 不用追了」→ 移除(不算完成)。
+
 ### 2. 判斷待回覆
 
 依對話(DM/群組 DM/channel+thread)分組。最後一則候選之後使用者在**同一對話/thread**有發言 → 視為已回,整組剔除;歸屬不明才用 `slack_read_thread` 補查,能省則省。
@@ -102,7 +122,7 @@ watchlist/@here 預設:watchlist 頻道 → 至少 P1(各頻道的 `note` 註記
 
 **訊息骨架(固定順序,填空式)**:
 - ①本輪變化:🆕 新增/⬆️ 升級/✅ 已銷/🔄 更新,一項一行(編號+級別 emoji+一句話+連結);無變化跳過此段
-- ②「── 目前全部待辦 ──」:**所有** open 項一項一行;pending 項行尾標「⏳ 你回了確認中」
+- ②「── 目前全部待辦 ──」:**所有** open 項一項一行;pending 項行尾標「⏳ 你回了確認中」;點名追蹤項(roll_calls)接在清單尾(格式見流程 1.7)
 - ③近期行程(今明兩天,notes ∪ Google 日曆 `list_events` 聯集)
 - ③.5 report_lists 區塊(見 daily.md;僅開工包/結算輪且 config.report_lists 有 enabled 項時出現)
 - ③.6 my_todos 區塊(見 daily.md;僅開工包/結算輪且 config.my_todos.enabled 為 true、有未完成項時出現)
@@ -281,6 +301,7 @@ cron 是 session 內記憶體,session 重開即消失,靠「上班」+本核對�
 
 - 「銷 3」「銷 3 5 8」「3 不用回」→ 移入 `dismissed`,一句確認
 - 「加待辦 X」「看待辦」「待辦完成 N」「刪待辦 N」→ 自記待辦清單(見〈我的待辦〉節,動 `my_todos`,與「銷 N」的 open 各自獨立)
+- 「追這則 <連結>」「誰沒回 N」「停追 N」→ 點名回覆追蹤(見流程 1.7,動 `roll_calls`)
 - 「回 3」「回 3:好,下午給你」→ 秘書擬稿(有給內容照寫),確認才發
 - 「看全部」/「例行的不用列」(文案進 `dismissed_patterns`)/「我慣用的 react 是 X」(更新 `config.style.ack_emojis`)
 - 「react 3 :+1:」「按 3 讚」→ 以使用者身分對該訊息按 react:user token `POST reactions.add`(`channel`/`timestamp` 取自 item 的 id,`name`=emoji 短碼去冒號,「讚」=+1,**「確認中」「請稍候」= `config.style.pending_emojis` 第一顆**如 :loading:)。成功後:emoji 屬 `ack_emojis` → 順帶銷帳;屬 `pending_emojis` → 標 pending;其他只按不銷。回 `missing_scope` → 引導使用者:app 的 OAuth 設定 User Token Scopes 加 `reactions:write` → Reinstall → `setx SLACK_USER_TOKEN` 新 token
