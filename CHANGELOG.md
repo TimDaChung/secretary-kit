@@ -7,6 +7,13 @@
 - **「記一下」與待辦合併為單一入口**——要做的事不分有無時程一律進待辦、追到完成才消(含秘書明確看到已完成的自動銷帳);純事件記錄(請假/會議)仍過期自清(Tim 拍板)
 - manifest user scopes 內建 `lists:read`+`files:read`(新裝機免二次 reinstall);回報單選配關卡先驗 scope,舊裝機才走補 scope 雙路線(自動代操作/手動)
 - bot DM 連結固定用 `<url|連結>` 兩字藍連結格式,禁止裸 URL(自檢第 3 條同步改)
+- 「秘書升級」正式化:pull 完自動執行 CHANGELOG 的「⚙️ 升級動作」(冪等,`kit_version` 記進度;要使用者選擇的問一句才做)
+
+⚙️ 升級動作(AI 自動執行,冪等):
+1. config.json 缺 `my_todos` → 補 `{"enabled": true, "section_title": "【我的待辦】", "show_in": ["morning", "evening"]}`,並告知新口令「加待辦/看待辦/待辦完成 N/刪待辦 N」與「記一下已改單一入口分流」
+2. config.json 缺 `report_lists` → 補 `[]`
+3. skill 目錄有 `team-defaults.json` 且 config.report_lists 為空 → 問「要啟用團隊預設回報單掃描嗎?(指派給你的未結案單會進開工包/結算)」——要 → 走 secretary-setup「回報單掃描」選配關卡步驟 0(含 scope 檢查,缺 `lists:read`/`files:read` 代補或引導 Reinstall);不要 → 記下不再問(config 加 `"report_lists_declined": true`)
+4. state.json 寫 `kit_version: "1.10.0"`
 
 ## v1.9.3 (2026-09-15)
 
