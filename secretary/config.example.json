@@ -72,7 +72,9 @@
       "請稍等",
       "請稍候"
     ],
-    "pending_timeout_hours": 4
+    "pending_timeout_hours": 4,
+    "rollcall_done_emojis": ["收到", "done"],
+    "_comment_rollcall": "點名回覆追蹤的「完成」react 白名單(填自家 workspace 的 emoji 短碼,去冒號);按其他 emoji 不算完成。"
   },
   "my_todos": {
     "_comment": "自記待辦清單(口令「加待辦/看待辦/待辦完成 N」)。enabled=false 完全停用;show_in 控制在哪些輪型顯示(morning=開工包/evening=下班結算)。",

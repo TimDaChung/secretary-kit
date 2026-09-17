@@ -75,11 +75,11 @@ ack emoji 清單讀 `config.style.ack_emojis`;muted 清單讀 `config.muted_chan
 
 **資料**:`roll_calls[]`:`{num, id: "<channel_id>:<message_ts>", summary, expected[], responded[], created, reminded, link}`;`num` 與 open[] **共用 `next_num`**(全域唯一,不另開第三套編號)。expected = 訊息內 tag 名單,去掉使用者本人與 bot。
 
-**每輪更新**(每個追蹤項約 2 次查詢):
-1. react 判定:user token GET `reactions.get?channel=<channel_id>&timestamp=<ts>&full=true`,各 react 的 `users` 併入 responded(任何 emoji 都算——按 done 習慣多為 react;回 missing_scope(缺 `reactions:read`)→ 本路靜默跳過只靠 thread 判定,整合健檢提示一次)
-2. thread 判定:`slack_read_thread`,在該 thread 發言的 expected 成員併入 responded
+**每輪更新**(每個追蹤項約 2 次查詢;判定標準 = **完成**,不是有回應就算):
+1. react 判定:user token GET `reactions.get?channel=<channel_id>&timestamp=<ts>&full=true`,**只有按了 `config.style.rollcall_done_emojis` 白名單內 emoji**(預設 `收到`、`done`)的 users 才併入 responded;其他 emoji(😂👀 等)不算。回 missing_scope(缺 `reactions:read`)→ 本路靜默跳過只靠 thread 判定,整合健檢提示一次
+2. thread 判定:`slack_read_thread`,expected 成員在 thread 的發言**看內容語意判斷**——明確表示完成/照辦(「改好了」「已更新」「done」「沒問題,已處理」)→ 併入 responded;含糊或只是知悉(「收到,晚點看」「好」「?」)→ **不算完成**,清單該項附註「(A 已回但未確認完成)」;判斷不出 → 當未完成附註處理,寧可多追
 3. **全到齊 → 自動銷**,bot DM ①段「✅ 點名 #N <摘要> 全員已回」
-4. 未到齊 → ② 清單尾列一行:「#N 📩 點名追蹤|<摘要>|已回 x/y,未回:<名字們>|連結」
+4. 未到齊 → ② 清單尾列一行:「#N 📩 點名追蹤|<摘要>|已完成 x/y,未完成:<名字們>|連結」(有「已回但未確認完成」的在該名字後括註)
 5. 建立超過 2 天且本輪無新增回覆 → ④ 提醒一次「📩 #N 還有 <名單> 沒回,要催嗎?(回 N 可擬催稿)」(reminded+1,不重複轟炸)
 
 **口令**:「誰沒回 N」→ 列已回/未回名單;「停追 N」「N 不用追了」→ 移除(不算完成)。
