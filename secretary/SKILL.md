@@ -87,9 +87,9 @@ watchlist/@here 預設:watchlist 頻道 → 至少 P1(各頻道的 `note` 註記
 
 ### 4. 輸出(增量分流)
 
-每項帶編號,P0→P2 排序:`#8 🔴 P0 | 王小明(DM) | 一句摘要 | 10:19 | <permalink>`
+每項帶編號,P0→P2 排序:`#8 🔴 P0 | 王小明(DM) | 一句摘要 | 10:19 | 連結`
 
-**每項必存 `link`**(search detailed 拿 permalink;拿不到退存 `<config.workspace_url>/archives/<channel_id>`)。P0/P1 輸出一律附連結。
+**每項必存 `link`**(search detailed 拿 permalink;拿不到退存 `<config.workspace_url>/archives/<channel_id>`)。P0/P1 輸出一律附連結,且**一律短藍字、不貼整串裸 URL**:Slack 訊息用 `<url|連結>`,終端輸出用 `[連結](url)`(2026-09-17 Tim 拍板:當日 10:08 開工包的兩字藍連結格式為固定標準)。
 
 - 本 session 第一掃(`session_first_scan_done` false):完整清單含 P2,結尾標 true
 - 之後輪次:只列**新增/升級的 P0/P1**,其餘壓一行「另有 N 項掛著(#3 #5),說『看全部』展開」
@@ -115,7 +115,7 @@ watchlist/@here 預設:watchlist 頻道 → 至少 P1(各頻道的 `note` 註記
 **發送前自檢(逐條核對,全過才發)**:
 1. ② 完整清單在嗎?(eco 平時輪以外必在)
 2. 冒號 lint:掃 `\S:\d`(冒號緊貼前字、後接數字)→ 命中一律改全形「：」,0 命中才過。屢犯 2 次:「今天:10:00」的 :10: 被 Slack 吃成 emoji;emoji 短碼(:white_check_mark:,冒號後是字母)不受影響
-3. 裸 URL 是否都在訊息最後一行或前後空行?否則後文被吃進連結變藍字(已發錯 → user token `chat.update` 修自己的訊息)
+3. 所有連結都是 `<url|連結>` 兩字藍連結格式?**禁止裸 URL**(裸 URL 又醜又會把後文吃進連結變藍字;已發錯 → user token `chat.update` 修自己的訊息)
 4. 標籤+時間全用全形冒號?(「今天：10:00-12:00」)
 
 **發送機制**:Bash curl `POST https://slack.com/api/chat.postMessage`,body `{"channel":"<config.bot.dm_channel_id>","text":"..."}`;token 讀 `$SLACK_BOT_TOKEN`(讀不到 → 請使用者 `setx` 重設,本輪退回 self-DM);**中文 JSON 一律寫檔後 `--data-binary @file`**(inline `-d` 會 invalid_json)。**此路徑僅限 bot→使用者的 DM 報告**;對外訊息(自動回覆、回 N)一律走 Slack MCP 以使用者帳號發(bot 不在的私人頻道會 `channel_not_found`),自檢第 3 條同樣適用。
