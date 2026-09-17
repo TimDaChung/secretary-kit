@@ -27,7 +27,7 @@ description: Slack 待回覆秘書(通用版)。掃描 DM + mentions + watchlist
 - `session_first_scan_done`:新 session 由「上班」重設為 false
 - 檔案不存在 → 以 24 小時前為掃描起點;有 `last_run` → **一律以 last_run 為起點(上限 7 天前)**——週一自然補掃週末、假期後自然補掃整段
 
-ack emoji 清單讀 `config.style.ack_emojis`;muted 清單讀 `config.muted_channels`。口令更新這兩者時直接寫回 config.json。
+ack emoji 清單讀 `config.style.ack_emojis`;muted 清單讀 `config.muted_channels`。口令更新這兩者時直接寫回 config.json。**config 選填鍵缺失容錯**:`style` 底下的鍵(ack_emojis/pending_emojis/rollcall_done_emojis 等)缺 → 用 `config.example.json` 的對應預設值頂上,並在整合健檢提示一次「config 缺 X 鍵,現用預設值」——選填鍵缺失絕不讓功能靜默失效(2026-09-17 組員回報:舊 config 缺 ack_emojis 使 react 銷帳靜默 0 命中)。
 
 ## 流程
 
@@ -137,11 +137,11 @@ watchlist/@here 預設:watchlist 頻道 → 至少 P1(各頻道的 `note` 註記
 
 **發送前自檢(逐條核對,全過才發)**:
 1. ② 完整清單在嗎?(eco 平時輪以外必在)
-2. 冒號 lint:掃 `\S:\d`(冒號緊貼前字、後接數字)→ 命中一律改全形「：」,0 命中才過。屢犯 2 次:「今天:10:00」的 :10: 被 Slack 吃成 emoji;emoji 短碼(:white_check_mark:,冒號後是字母)不受影響
+2. 冒號 lint(兩條都跑):(a) 掃 `\S:\d`(冒號緊貼前字、後接數字)→ 命中一律改全形「：」。屢犯 2 次:「今天:10:00」的 :10: 被 Slack 吃成 emoji (b) 掃 `:[^:\s]+:`,夾住的內容**含小寫英數與 `_+-` 以外字元**(即不可能是合法 emoji 短碼,如「:大會14:」)→ 同樣改全形(2026-09-17 組員回報窄版漏抓此型)。合法 emoji 短碼(:white_check_mark:)兩條都不會誤傷
 3. 所有連結都是 `<url|連結>` 兩字藍連結格式?**禁止裸 URL**(裸 URL 又醜又會把後文吃進連結變藍字;已發錯 → user token `chat.update` 修自己的訊息)
 4. 標籤+時間全用全形冒號?(「今天：10:00-12:00」)
 
-**發送機制**:Bash curl `POST https://slack.com/api/chat.postMessage`,body `{"channel":"<config.bot.dm_channel_id>","text":"..."}`;token 讀 `$SLACK_BOT_TOKEN`(讀不到 → 請使用者 `setx` 重設,本輪退回 self-DM);**中文 JSON 一律寫檔後 `--data-binary @file`**(inline `-d` 會 invalid_json)。**此路徑僅限 bot→使用者的 DM 報告**;對外訊息(自動回覆、回 N)一律走 Slack MCP 以使用者帳號發(bot 不在的私人頻道會 `channel_not_found`),自檢第 3 條同樣適用。
+**發送機制**:Bash curl `POST https://slack.com/api/chat.postMessage`,body `{"channel":"<config.bot.dm_channel_id>","text":"..."}`;token 讀 `$SLACK_BOT_TOKEN`(讀不到 → 請使用者 `setx` 重設,本輪退回 self-DM);**中文 JSON 一律寫檔後 `--data-binary @file`**(inline `-d` 會 invalid_json);**發送一律走 Bash,禁用 PowerShell 組稿發送**(Get-Content/ConvertTo-Json 管線會把 PSPath 等中繼資料夾進內容,使用者收到亂碼——2026-09-15 組員實測重現)。**此路徑僅限 bot→使用者的 DM 報告**;對外訊息(自動回覆、回 N)一律走 Slack MCP 以使用者帳號發(bot 不在的私人頻道會 `channel_not_found`),自檢第 3 條同樣適用。
 
 bot 識別:app `config.bot.app_id`,bot user `config.bot.bot_user_id`,DM 頻道 `config.bot.dm_channel_id`。掃描時忽略 bot 自己的訊息與 self-DM 裡「🤖 秘書」開頭的舊訊息。
 
@@ -264,7 +264,7 @@ cron 是 session 內記憶體,session 重開即消失,靠「上班」+本核對�
 - **「秘書」「上班」「onduty」**(onduty = 啟動器 bat 的 ASCII 別名):跑排程核對建齊 cron、立刻完整掃一次、告知 job ID。**重開 session = 舊 cron 全消失**:上班時一併清除今天未結束行程的 `reminder_scheduled` 標記,讓首輪補提醒重新成對排(提醒+切狀態);當天已跑過的開工包/結算不重跑(cron 時間已過自然不觸發)
 - **「下班」**(提早下班):立即下班結算+停主掃描;每日 cron 保留,隔天開工包照常自動上班
 - **「關掉秘書」**:CronDelete 全部 job(含每日),一句話確認;job ID 不在 context 用 CronList 找
-- **「秘書升級」**:在 skill 資料夾的上層(即 repo 根——安裝採 junction,skill 資料夾就在 repo 內)跑 `git pull`;成功 → 摘要 `CHANGELOG.md` 的新增段落給使用者看,並提醒「排程核對會在下一輪自動套用新邏輯」;接著跑**升級後檢查**:repo 根有 `secretary-start.bat` 而使用者桌面沒有 → 問「新版附了啟動器(內建 Sonnet+當機紀錄),要放到桌面嗎?順便設開機自動值班嗎?」要 → 代複製(桌面/`shell:startup`);接著執行 **CHANGELOG 升級動作**:CHANGELOG 各版本下的「⚙️ 升級動作」區塊 = pull 完 AI 自動執行的清單。規則:(a) 只跑比 state.json `kit_version` 新的版本的動作,由舊到新逐版跑,跑完把 `kit_version` 寫成最新版;`kit_version` 缺值(舊裝機首次)→ 全部版本的動作都檢查一遍——**升級動作一律寫成冪等**(已做過再跑無害,如「config 缺 X key 才補」),重跑安全 (b) 純補檔/補 key 的直接做;**要使用者選擇的(開新功能、要 scope)問一句才做,不擅自開** (c) 有衝突或失敗 → **不硬解**,顯示錯誤訊息請使用者找管理者處理
+- **「秘書升級」**:在 skill 資料夾的上層(即 repo 根——安裝採 junction,skill 資料夾就在 repo 內)先跑 `git status --porcelain`——**版控檔有未提交修改(髒污)→ 停,不硬升**:列出 diff 摘要給使用者,說明「kit 檔被本機直接改過(違反〈異常回報〉節規則),這些修改上游沒有,升級會衝突」,建議走 issue-triage 把修改內容回報給維護者;使用者堅持升級才 `git stash` 保存後 pull(stash 名稱帶日期,告知可隨時找回)。乾淨才直接 `git pull`;成功 → 摘要 `CHANGELOG.md` 的新增段落給使用者看,並提醒「排程核對會在下一輪自動套用新邏輯」;接著跑**升級後檢查**:repo 根有 `secretary-start.bat` 而使用者桌面沒有 → 問「新版附了啟動器(內建 Sonnet+當機紀錄),要放到桌面嗎?順便設開機自動值班嗎?」要 → 代複製(桌面/`shell:startup`);接著執行 **CHANGELOG 升級動作**:CHANGELOG 各版本下的「⚙️ 升級動作」區塊 = pull 完 AI 自動執行的清單。規則:(a) 只跑比 state.json `kit_version` 新的版本的動作,由舊到新逐版跑,跑完把 `kit_version` 寫成最新版;`kit_version` 缺值(舊裝機首次)→ 全部版本的動作都檢查一遍——**升級動作一律寫成冪等**(已做過再跑無害,如「config 缺 X key 才補」),重跑安全 (b) 純補檔/補 key 的直接做;**要使用者選擇的(開新功能、要 scope)問一句才做,不擅自開** (c) 有衝突或失敗 → **不硬解**,顯示錯誤訊息請使用者找管理者處理
 - **終端(秘書視窗)關閉 = 一切排程與自動回覆停止**;請假日要功能運作,當天電腦與秘書視窗必須開著
 
 ## 個人備忘(「記一下」——單一入口,依性質分流)
