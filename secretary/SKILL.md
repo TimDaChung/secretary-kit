@@ -13,6 +13,7 @@ description: Slack 待回覆秘書(通用版)。掃描 DM + mentions + watchlist
 - `bot` 三欄(`app_id` / `bot_user_id` / `dm_channel_id`)要嘛全填、要嘛全空:全空 = 停用 bot DM 相關功能(§4.4、bot 指令通道、開工包/結算改在終端輸出),其餘照常
 - `deputies` 可為空陣列:空 = 請假自動回覆不 tag 代理人、狀態後綴省略代理人段
 - **`templates.md` 不存在 → 從同目錄 `templates.example.md` 複製一份再繼續**。範本庫一律讀寫 `templates.md`(個人版,gitignore 保護);`templates.example.md` 只是首裝種子,不要直接改它
+- **`semantics.md`(個人語意字典)同上**:不存在 → 從 `semantics.example.md` 複製。定義個人的 emoji/用詞/句型含意與口令別名,**判讀優先序:semantics.md > config 結構化清單 > 預設語意判斷**——已回/完成/暫回/銷帳等判定先查字典。使用者說「以後 X 代表 Y」「按 X 就是 Z 的意思」→ 寫進 semantics.md(個人檔,升級不蓋),**絕不為個人語意改 SKILL.md**
 - 下文凡寫 `config.xxx` 即指 config.json 對應欄位;凡寫「使用者」即指 `config.user.name` 本人
 
 ## 狀態檔
