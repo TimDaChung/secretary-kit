@@ -1,0 +1,19 @@
+{
+  "_comment": "團隊預設回報單(隨 repo 發佈)。安裝精靈裝機或口令「加回報單」時會偵測本檔並問要不要啟用;本檔只放 ID 不放內部名稱。",
+  "report_lists": [
+    {
+      "enabled": true,
+      "section_title": "【回報單待處理】",
+      "_list_name": "團隊回報單",
+      "list_id": "F079GSP27L5",
+      "team_id": "T0B06GY6S",
+      "assignee_cols": ["Col01", "Col0C0C2ATKS8"],
+      "_comment_assignee": "Col01=受託人、Col0C0C2ATKS8=pm,任一欄是自己就列;只想看受託人的把 pm 那個 Col 拿掉",
+      "status_col": "Col07A8L3CQF2",
+      "name_col": "Col07A8HMTDJL",
+      "assignee_user_id": "",
+      "exclude_status": ["完成"],
+      "show_in": ["morning", "evening"]
+    }
+  ]
+}

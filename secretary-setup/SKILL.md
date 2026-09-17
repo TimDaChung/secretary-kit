@@ -155,7 +155,7 @@ setx SLACK_USER_TOKEN "xoxp-你的token"
 
 不在進度診斷 1-7 內、不擋裝機。時機:試跑通過後問一句「有沒有指派給你的 Slack List 回報單要一起盯?」,或使用者事後說「加回報單」「掃 List」時進入。**每一項都要問安裝者本人,不可沿用別人的設定值**:
 
-0. **團隊預設捷徑**:`~/.claude/skills/secretary/team-defaults.json` 存在(團隊內部發放,不進版控)→ 列出裡面的 report_lists(用 `_list_name`)問「要不要啟用團隊預設回報單?」,要 → 整包抄進 config.report_lists(assignee_user_id 留空 = 本人),跳到步驟 3 驗 scope 後直接步驟 7 試撈,步驟 1-2、4-6 全免
+0. **團隊預設捷徑**:`~/.claude/skills/secretary/team-defaults.json` 存在(隨 repo 發佈,只含 ID 不含內部名稱)→ 列出裡面的 report_lists(用 `_list_name`)問「要不要啟用團隊預設回報單?」,要 → 整包抄進 config.report_lists(assignee_user_id 留空 = 本人),跳到步驟 3 驗 scope 後直接步驟 7 試撈,步驟 1-2、4-6 全免
 1. 問要不要啟用;**不要 → 寫 `report_lists: []` 跳過**
 2. 要 → 請安裝者貼 List 網址 → 從網址解析 `team_id`(T 開頭)與 `list_id`(F 開頭)
 3. **先驗 scope 再說**:用 user token 打一次 `files.info?file=<list_id>`——成功 = scope 已有(v1.10 後新裝的 manifest 內建),直接跳步驟 4;回 `missing_scope` = 舊裝機要補,走雙路線(同關卡 2 慣例):
