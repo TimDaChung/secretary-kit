@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## v1.19.1 (2026-09-22)
+
+- **會議時間一律不做時區換算**:〈會議同步 Google 日曆〉補上鐵則——訊息裡出現的城市名(「9F雅加達」「9F台北會議室」這類)是**會議室名稱**,不是地點也不是時區。以前沒寫這條,秘書看到「(雅加達)」標註會把時間當 UTC+7 換算成本地時間再去比對日曆,整場會議時間就歪了。現在:照字面時間解讀、`create_event` 時區一律給使用者本地時區、城市名只留在標題/地點欄;真有跨時區約會先問一句,不自行推算
+
 ## v1.19.0 (2026-09-22)
 
 - **新增 `config.model`,模型全可客製**:`session`(值班終端本身,預設 `sonnet`)、`scan_agent`(平時輪掃描 agent,預設 `inherit`)、`big_round_agent`(開工包/結算輪,預設 `inherit`)、`eco_scan_agent`(省量模式平時輪,預設 `haiku`)。可填 `inherit`/`haiku`/`sonnet`/`opus`/`fable`;`inherit` = 派 agent 時不傳 model,跟值班終端一致
