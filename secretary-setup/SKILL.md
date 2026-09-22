@@ -145,7 +145,7 @@ setx SLACK_USER_TOKEN "xoxp-你的token"
 先提醒使用者:值班是長時間自動任務,建議用 Sonnet(`claude --model sonnet` 啟動或 `/model sonnet`);Pro 方案另可用口令「省量模式」降低用量。
 
 **啟動器安裝(試跑通過後收尾,精靈代做)**:
-1. 複製 repo 根的 `secretary-start.bat` 到使用者桌面(已內建 Sonnet 與退出紀錄;檔名可改但**必須保持英數**——中文檔名+編碼問題會讓 cmd 閃退)
+1. 複製 repo 根的 `secretary-start.bat` 到使用者桌面(**模型讀 `config.model.session`,預設 Sonnet**,之後換模型改 config 即可、不用重新複製 bat;含退出紀錄。檔名可改但**必須保持英數**——中文檔名+編碼問題會讓 cmd 閃退)
 2. 問使用者「要不要開機自動值班?」要 → 再複製一份到 `%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\`;不要 → 跳過,之後隨時可補
 3. 告知:之後上班雙擊桌面 bat 即可;視窗若異常關閉,死因記錄在 `~/.claude/secretary-exit.log`
 1. 發 bot DM:「🤖 你的秘書裝好了」→ 請使用者確認手機有跳通知

@@ -38,6 +38,8 @@ ack emoji 清單讀 `config.style.ack_emojis`;muted 清單讀 `config.muted_chan
 
 每輪掃描(含開工包、下班結算)主 session **不自己跑下面 1~5 節**,改派一個 general-purpose subagent 執行,prompt 自包含,要點:
 
+**派 agent 用哪個模型**(讀 `config.model`,缺鍵用括號內預設):平時輪 → `scan_agent`(預設 `inherit`);開工包/結算輪 → `big_round_agent`(預設 `inherit`);eco 省量模式的平時輪 → `eco_scan_agent`(預設 `haiku`,覆蓋 `scan_agent`)。值為 `inherit` = 派 agent 時**不傳 `model` 參數**(跟值班終端同模型);其餘直接當 `model` 參數傳(`haiku`/`sonnet`/`opus`/`fable`)。**值班終端本身的模型不由本 skill 決定**——那是 `secretary-start.bat` 啟動時讀 `config.model.session` 帶 `--model` 給 Claude Code;手動打 `claude` 啟動的人不受此設定影響,要自己帶 `--model` 或用 `/model` 切。
+
 > 讀 `~/.claude/skills/secretary/SKILL.md` **整份**(「排程核對」節除外——cron 歸主 session 管)與同目錄 `config.json`、`state.json`;**本輪是開工包或下班結算 → 加讀同目錄 `daily.md`**(兩大輪的加碼項與專屬區塊;平時輪不讀,省 token)。執行完整掃描(含 bot DM 發送),結果寫回 `state.json`,回傳兩段:(a) 新增/變化項摘要 ≤15 行(編號+一句話) (b) 需主 session 排 cron 的事項清單——**每個今日行程回報成對兩顆:會前提醒＋會議開始切狀態**(prompt 寫法各節有定義),另含模式結束補掃等。
 
 主 session 每輪只做:**排程核對(cron 只能在主 session 建/刪)→ 派 agent → 讀回摘要 → 補排 cron → 顯示摘要給使用者**。Slack 搜尋結果與頻道內容**絕不進主 session context**——這是本設計的目的,使 session 全天保持輕量、不觸發壓縮。
@@ -219,7 +221,7 @@ bot 識別:app `config.bot.app_id`,bot user `config.bot.bot_user_id`,DM 頻道 `
 | 模式掃描(間隔 `mode_scan_interval_min`;**不受午休影響**) | 會議/請假模式中 |
 | 一次性:會前提醒、會議開始切狀態、模式結束補掃、預約請假 | 照各節規則排,執行完即消 |
 
-**省量模式**:`config.schedule.profile` = "standard"(預設)/"eco"。eco 生效時:主掃描與模式掃描間隔 ×2(主掃至少 60 分;**`fixed` 模式不動 `scan_times`**——那是使用者明確指定的時間點,其餘 eco 效果照常)、bot DM 平時輪改增量(見 §4.4 輪型表)、**平時輪掃描 agent 降級用 Haiku**(派 agent 時 `model: "haiku"`;開工包/結算輪仍用 session 模型——大輪內容雜、誤判代價高)、**thread 續追上限減半**(`thread_watch.max_threads` 與 `observe_max` 各 ÷2 取整,見 1.4;不寫回 config,切回標準即復原)。覺得 Haiku 分級誤判變多 → 切回「標準模式」即恢復。P0 推播與口令回應不受影響。口令「**省量模式**」/「**標準模式**」即切換並寫回 config。**額度自動降頻**:掃描或擬稿遇到 usage/rate limit 類錯誤 → 當日臨時視同 eco 並 bot DM 告知「額度吃緊,今日已降頻」,隔天開工包恢復 config 設定值。
+**省量模式**:`config.schedule.profile` = "standard"(預設)/"eco"。eco 生效時:主掃描與模式掃描間隔 ×2(主掃至少 60 分;**`fixed` 模式不動 `scan_times`**——那是使用者明確指定的時間點,其餘 eco 效果照常)、bot DM 平時輪改增量(見 §4.4 輪型表)、**平時輪掃描 agent 降級**(用 `config.model.eco_scan_agent`,預設 `haiku`;開工包/結算輪仍照 `big_round_agent`——大輪內容雜、誤判代價高)、**thread 續追上限減半**(`thread_watch.max_threads` 與 `observe_max` 各 ÷2 取整,見 1.4;不寫回 config,切回標準即復原)。覺得 Haiku 分級誤判變多 → 切回「標準模式」即恢復。P0 推播與口令回應不受影響。口令「**省量模式**」/「**標準模式**」即切換並寫回 config。**額度自動降頻**:掃描或擬稿遇到 usage/rate limit 類錯誤 → 當日臨時視同 eco 並 bot DM 告知「額度吃緊,今日已降頻」,隔天開工包恢復 config 設定值。
 
 cron 是 session 內記憶體,session 重開即消失,靠「上班」+本核對重建。此設計讓 session 重開、規則改版、模式異常殘留都在下一輪自癒。**「上班/onduty」啟動當下 state.json 寫 `duty_started: <今天日期>`**(只在使用者/bat 啟動時寫,cron 觸發的開工包與各輪不改)——結算用它判斷值班對話是否跨日(見 daily.md)。
 
@@ -366,6 +368,8 @@ cron 是 session 內記憶體,session 重開即消失,靠「上班」+本核對�
 - 「銷 3」「銷 3 5 8」「3 不用回」→ 移入 `dismissed`,一句確認
 - 「加待辦 X」「看待辦」「待辦完成 N」「刪待辦 N」→ 自記待辦清單(見〈我的待辦〉節,動 `my_todos`,與「銷 N」的 open 各自獨立)
 - 「追這則 <連結>」「誰沒回 N」「停追 N」→ 點名回覆追蹤(見流程 1.7,動 `roll_calls`)
+- 「秘書用 <模型>」「值班改用 fable/sonnet/opus/haiku」→ 寫回 `config.model.session`,回一句「下次重開值班終端生效(雙擊 bat)」——**當前 session 的模型改不了**,那是 Claude Code 層級的事
+- 「掃描用 <模型>」「平時輪改用 haiku」→ 寫回 `config.model.scan_agent`,下一輪即生效(派 agent 時帶新模型)
 - 「thread 續追不用了」「關掉 thread 續追」→ 寫回 `config.thread_watch.enabled: false`(整個功能關閉,`watched_threads`/`observed_threads` 清空);「開啟 thread 續追」→ 設回 true
 - 「thread 只追 N 串」「觀察名單留 N 天」→ 寫回 `max_threads` / `observe_days`
 - 「停追串 N」「這串不用追了」→ thread 續追移出(見流程 1.4,動 `watched_threads`;與「停追 N」不同,那是點名追蹤)

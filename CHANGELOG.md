@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## v1.19.0 (2026-09-22)
+
+- **新增 `config.model`,模型全可客製**:`session`(值班終端本身,預設 `sonnet`)、`scan_agent`(平時輪掃描 agent,預設 `inherit`)、`big_round_agent`(開工包/結算輪,預設 `inherit`)、`eco_scan_agent`(省量模式平時輪,預設 `haiku`)。可填 `inherit`/`haiku`/`sonnet`/`opus`/`fable`;`inherit` = 派 agent 時不傳 model,跟值班終端一致
+- **`secretary-start.bat` 改為讀 config**:原本把 `--model sonnet` 寫死在 bat 裡,想換模型要手改 bat、而 bat 是複製到桌面的(`git pull` 不會更新)。現在 bat 讀 `config.model.session`,**換模型只改 config、或跟秘書說「秘書用 fable」,不用再碰 bat**。讀不到/沒設/config 損毀/檔案不存在一律 fallback `sonnet`
+- **新增口令**:「秘書用 fable」「值班改用 sonnet」→ 寫 `model.session`(下次重開值班終端生效——當前 session 的模型是 Claude Code 層級,skill 改不了);「掃描用 haiku」「平時輪改用 X」→ 寫 `model.scan_agent`(下一輪即生效)
+- 實測 7 情境全過:fable/sonnet/opus/haiku 各自正確讀出,無 model 區塊、config 損毀、config 不存在三種 fallback 皆回 sonnet
+- 踩坑記錄:`for /f` 反引號內的管線**不可**跳脫成 `^|`,否則 PowerShell 收到字面 `^` 解析失敗、靜默走 fallback(排查時誤判成 BOM 問題);bat 內註解已標註
+
+⚙️ **升級動作**:`git pull` 後,**桌面那支 `secretary-start.bat` 要重新複製一次**(`cp ~/.claude/skills/secretary-kit 路徑/secretary-start.bat 到桌面`,或跟秘書說「更新桌面啟動檔」)——這是最後一次,之後換模型都只改 config。不重新複製的話舊 bat 仍寫死 sonnet,功能照常、只是換不了模型。config 缺 `model` 區塊視同全預設,行為與 v1.18.1 相同
+
+
 ## v1.18.1 (2026-09-22)
 
 - 補 thread 續追的開關口令:「thread 續追不用了」「關掉 thread 續追」→ `enabled: false` 並清空兩份名單;「開啟 thread 續追」恢復;「thread 只追 N 串」「觀察名單留 N 天」調參數。原本只能手改 config,公告要教人關卻沒有對應口令

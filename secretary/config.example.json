@@ -65,6 +65,13 @@
     "observe_days": 14,
     "observe_max": 50
   },
+  "model": {
+    "_comment": "秘書用哪些模型。session = 值班終端本身的模型(secretary-start.bat 啟動時讀這個;改了重新雙擊 bat 生效,不用改 bat)。scan_agent = 平時輪掃描 agent;big_round_agent = 開工包/結算輪(內容雜、誤判代價高,建議留 inherit);eco_scan_agent = 省量模式下的平時輪。可填 inherit(跟值班終端同模型)/haiku/sonnet/opus/fable。",
+    "session": "sonnet",
+    "scan_agent": "inherit",
+    "big_round_agent": "inherit",
+    "eco_scan_agent": "haiku"
+  },
   "style": {
     "_comment": "tone_notes = 擬稿語氣微調(選填,自由文字,例:「簡短直接,同輩不加客套」);空字串 = 用預設「工作上的官方語氣,客氣即可」。ack_emojis = 你慣用的已讀/處理完 react(供 React 銷帳)。",
     "tone_notes": "",
