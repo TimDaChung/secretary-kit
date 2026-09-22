@@ -29,11 +29,13 @@
   "muted_channels": [],
   "_comment_muted_channels": "完全無視的頻道/對話 ID 清單(不整理、不進清單、不自動回覆)。可留空,執行期用口令「無視 X」增減。",
   "schedule": {
-    "_comment": "必填。morning_time/evening_time = 開工包與下班結算時刻(24 小時制 HH:MM);scan_interval_min = 主掃描間隔分鐘;mode_scan_interval_min = 會議/請假模式掃描間隔分鐘。",
+    "_comment": "必填。morning_time/evening_time = 開工包與下班結算時刻(24 小時制 HH:MM)。scan_mode = 主掃描模式:interval(預設,每 scan_interval_min 分鐘掃一次)或 fixed(只在 scan_times 列出的時間點掃)。scan_times = fixed 模式的掃描時刻清單(HH:MM),interval 模式下忽略;fixed 模式不套用午休。mode_scan_interval_min = 會議/請假模式掃描間隔分鐘(不受 scan_mode 影響)。",
     "_comment_lunch_break": "午休期間主掃描不跑,改由開始/結束各一次的邊界掃銜接;設 null = 不設午休。",
     "morning_time": "09:03",
     "evening_time": "18:27",
-    "scan_interval_min": 30,
+    "scan_mode": "interval",
+    "scan_interval_min": 60,
+    "scan_times": [],
     "mode_scan_interval_min": 60,
     "lunch_break": {
       "start": "12:00",

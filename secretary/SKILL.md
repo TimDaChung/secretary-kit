@@ -200,18 +200,26 @@ bot 識別:app `config.bot.app_id`,bot user `config.bot.bot_user_id`,DM 頻道 `
 
 ## 排程核對(每輪掃描開頭執行,宣告式)
 
-不用「進入時建、結束時刪」的事件思維——**每輪先核對「現在應有哪些 cron」,不符就建/刪**,cron id 記在 `cron_jobs`。時間全部由 config 換算:開工包 = `config.schedule.morning_time`、下班結算 = `config.schedule.evening_time`、主掃描間隔 = `config.schedule.scan_interval_min`(換算 cron 時建議帶幾分鐘偏移避開整點,如間隔 30 分 → `13,43 * * * *` 型)、模式掃描間隔 = `config.schedule.mode_scan_interval_min`(state.json 有執行期覆寫值則優先)。應然組合:
+不用「進入時建、結束時刪」的事件思維——**每輪先核對「現在應有哪些 cron」,不符就建/刪**,cron id 記在 `cron_jobs`。時間全部由 config 換算:開工包 = `config.schedule.morning_time`、下班結算 = `config.schedule.evening_time`、模式掃描間隔 = `config.schedule.mode_scan_interval_min`(state.json 有執行期覆寫值則優先)。
+
+**主掃描有兩種模式**,由 `config.schedule.scan_mode` 決定(缺值視同 `interval`):
+
+- **`interval` 定期排程**(預設):每 `scan_interval_min` 分鐘掃一次(預設 60)。換算 cron 帶幾分鐘偏移避開整點(如間隔 60 分 → `17 * * * *`;30 分 → `13,43 * * * *`)
+- **`fixed` 指定排程**:只在 `scan_times[]` 列出的時間點掃(如 `["10:00","14:00","16:30"]`),每個時間點各建一顆每日 cron(`M H * * *`)。**午休設定在此模式下不適用**(時間點是你自己挑的,不需要再排除午休),不建午休邊界掃。`scan_times` 為空或缺 → 退回 `interval` 模式並在整合健檢提示一次
+
+應然組合:
 
 | cron | 應存在的條件 |
 |---|---|
 | 開工包(`morning_time`,每日) | 恆在(值班中) |
 | 下班結算(`evening_time`,每日) | 恆在(值班中) |
-| 主掃描(間隔 `scan_interval_min`;`lunch_break` 有設 → cron 小時欄位排除午休覆蓋的整點時段,例 12:00–13:30 → `13,43 0-11,14-23 * * *`;null → 全時段) | 工作時段(開工包後~結算前)且**非**會議/請假模式 |
-| 午休邊界掃(`lunch_break.start` 與 `end` 各一個每日 cron,例 `0 12 * * *`+`30 13 * * *`;開始收上午尾、結束補掃) | 同主掃描;`lunch_break` 為 null → 不建 |
+| 主掃描 **interval 模式**(間隔 `scan_interval_min`;`lunch_break` 有設 → cron 小時欄位排除午休覆蓋的整點時段,例 12:00–13:30 → `17 0-11,14-23 * * *`;null → 全時段) | `scan_mode=interval`、工作時段(開工包後~結算前)且**非**會議/請假模式 |
+| 主掃描 **fixed 模式**(`scan_times[]` 每個時間點一顆每日 cron) | `scan_mode=fixed` 且**非**會議/請假模式。不受工作時段與午休限制——指定幾點就幾點 |
+| 午休邊界掃(`lunch_break.start` 與 `end` 各一個每日 cron,例 `0 12 * * *`+`30 13 * * *`;開始收上午尾、結束補掃) | 同主掃描;**僅 interval 模式**;`lunch_break` 為 null → 不建 |
 | 模式掃描(間隔 `mode_scan_interval_min`;**不受午休影響**) | 會議/請假模式中 |
 | 一次性:會前提醒、會議開始切狀態、模式結束補掃、預約請假 | 照各節規則排,執行完即消 |
 
-**省量模式**:`config.schedule.profile` = "standard"(預設)/"eco"。eco 生效時:主掃描與模式掃描間隔 ×2(主掃至少 60 分)、bot DM 平時輪改增量(見 §4.4 輪型表)、**平時輪掃描 agent 降級用 Haiku**(派 agent 時 `model: "haiku"`;開工包/結算輪仍用 session 模型——大輪內容雜、誤判代價高)、**thread 續追上限減半**(`thread_watch.max_threads` 與 `observe_max` 各 ÷2 取整,見 1.4;不寫回 config,切回標準即復原)。覺得 Haiku 分級誤判變多 → 切回「標準模式」即恢復。P0 推播與口令回應不受影響。口令「**省量模式**」/「**標準模式**」即切換並寫回 config。**額度自動降頻**:掃描或擬稿遇到 usage/rate limit 類錯誤 → 當日臨時視同 eco 並 bot DM 告知「額度吃緊,今日已降頻」,隔天開工包恢復 config 設定值。
+**省量模式**:`config.schedule.profile` = "standard"(預設)/"eco"。eco 生效時:主掃描與模式掃描間隔 ×2(主掃至少 60 分;**`fixed` 模式不動 `scan_times`**——那是使用者明確指定的時間點,其餘 eco 效果照常)、bot DM 平時輪改增量(見 §4.4 輪型表)、**平時輪掃描 agent 降級用 Haiku**(派 agent 時 `model: "haiku"`;開工包/結算輪仍用 session 模型——大輪內容雜、誤判代價高)、**thread 續追上限減半**(`thread_watch.max_threads` 與 `observe_max` 各 ÷2 取整,見 1.4;不寫回 config,切回標準即復原)。覺得 Haiku 分級誤判變多 → 切回「標準模式」即恢復。P0 推播與口令回應不受影響。口令「**省量模式**」/「**標準模式**」即切換並寫回 config。**額度自動降頻**:掃描或擬稿遇到 usage/rate limit 類錯誤 → 當日臨時視同 eco 並 bot DM 告知「額度吃緊,今日已降頻」,隔天開工包恢復 config 設定值。
 
 cron 是 session 內記憶體,session 重開即消失,靠「上班」+本核對重建。此設計讓 session 重開、規則改版、模式異常殘留都在下一輪自癒。**「上班/onduty」啟動當下 state.json 寫 `duty_started: <今天日期>`**(只在使用者/bat 啟動時寫,cron 觸發的開工包與各輪不改)——結算用它判斷值班對話是否跨日(見 daily.md)。
 
@@ -362,6 +370,8 @@ cron 是 session 內記憶體,session 重開即消失,靠「上班」+本核對�
 - 「回 3」「回 3:好,下午給你」→ 秘書擬稿(有給內容照寫),確認才發
 - 「看全部」/「例行的不用列」(文案進 `dismissed_patterns`)/「我慣用的 react 是 X」(更新 `config.style.ack_emojis`)
 - 「react 3 :+1:」「按 3 讚」→ 以使用者身分對該訊息按 react:user token `POST reactions.add`(`channel`/`timestamp` 取自 item 的 id,`name`=emoji 短碼去冒號,「讚」=+1,**「確認中」「請稍候」= `config.style.pending_emojis` 第一顆**如 :loading:)。成功後:emoji 屬 `ack_emojis` → 順帶銷帳;屬 `pending_emojis` → 標 pending;其他只按不銷。回 `missing_scope` → 引導使用者:app 的 OAuth 設定 User Token Scopes 加 `reactions:write` → Reinstall → `setx SLACK_USER_TOKEN` 新 token
+- 「掃描改一小時一次」「改成每 N 分掃一次」→ `scan_mode=interval` + 寫回 `scan_interval_min`
+- 「改成指定時間掃」「只在 10 點 14 點 16 點半掃」→ `scan_mode=fixed` + 寫回 `scan_times[]`(語意解析時間,確認一次再寫);「改回定時掃描」→ 切回 interval
 - 「X 回了」不用講,下次掃描自動偵測
 
 ## 異常回報
