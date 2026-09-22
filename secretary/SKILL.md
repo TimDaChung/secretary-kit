@@ -366,6 +366,8 @@ cron 是 session 內記憶體,session 重開即消失,靠「上班」+本核對�
 - 「銷 3」「銷 3 5 8」「3 不用回」→ 移入 `dismissed`,一句確認
 - 「加待辦 X」「看待辦」「待辦完成 N」「刪待辦 N」→ 自記待辦清單(見〈我的待辦〉節,動 `my_todos`,與「銷 N」的 open 各自獨立)
 - 「追這則 <連結>」「誰沒回 N」「停追 N」→ 點名回覆追蹤(見流程 1.7,動 `roll_calls`)
+- 「thread 續追不用了」「關掉 thread 續追」→ 寫回 `config.thread_watch.enabled: false`(整個功能關閉,`watched_threads`/`observed_threads` 清空);「開啟 thread 續追」→ 設回 true
+- 「thread 只追 N 串」「觀察名單留 N 天」→ 寫回 `max_threads` / `observe_days`
 - 「停追串 N」「這串不用追了」→ thread 續追移出(見流程 1.4,動 `watched_threads`;與「停追 N」不同,那是點名追蹤)
 - 「回 3」「回 3:好,下午給你」→ 秘書擬稿(有給內容照寫),確認才發
 - 「看全部」/「例行的不用列」(文案進 `dismissed_patterns`)/「我慣用的 react 是 X」(更新 `config.style.ack_emojis`)
