@@ -24,11 +24,12 @@ description: Slack 待回覆秘書(通用版)。掃描 DM + mentions + watchlist
 - `dismissed[]`(已銷 id)、`dismissed_patterns[]`(例行訊息文字黑名單,substring 比對)、`notes[]`(備忘)
 - `my_todos[]`(自記待辦,見〈我的待辦〉)與計數器 `my_todos_next`
 - `roll_calls[]`(點名回覆追蹤,見流程 1.7;`num` 與 open[] 共用 `next_num`)
+- thread 續追三層(見流程 1.4):`watched_threads[]`(活躍,每輪追)、`observed_threads[]`(觀察名單,只在兩大輪複查,見 daily.md)、`thread_watch_optout[]`(手動停追,不因再被 tag 而復活)
 - `mode_scan_interval_min` 執行期覆寫值、`cron_jobs`(見各節)
 - `session_first_scan_done`:新 session 由「上班」重設為 false
 - 檔案不存在 → 以 24 小時前為掃描起點;有 `last_run` → **一律以 last_run 為起點(上限 7 天前)**——週一自然補掃週末、假期後自然補掃整段
 
-ack emoji 清單讀 `config.style.ack_emojis`;muted 清單讀 `config.muted_channels`。口令更新這兩者時直接寫回 config.json。**config 選填鍵缺失容錯**:`style` 底下的鍵(ack_emojis/pending_emojis/rollcall_done_emojis 等)缺 → 用 `config.example.json` 的對應預設值頂上,並在整合健檢提示一次「config 缺 X 鍵,現用預設值」——選填鍵缺失絕不讓功能靜默失效(2026-09-17 組員回報:舊 config 缺 ack_emojis 使 react 銷帳靜默 0 命中)。
+ack emoji 清單讀 `config.style.ack_emojis`;muted 清單讀 `config.muted_channels`。口令更新這兩者時直接寫回 config.json。**config 選填鍵缺失容錯**:`style` 底下的鍵(ack_emojis/pending_emojis/rollcall_done_emojis 等)、`thread_watch` 整區或其下任一鍵缺 → 用 `config.example.json` 的對應預設值頂上,並在整合健檢提示一次「config 缺 X 鍵,現用預設值」——選填鍵缺失絕不讓功能靜默失效(2026-09-17 組員回報:舊 config 缺 ack_emojis 使 react 銷帳靜默 0 命中)。
 
 ## 流程
 
@@ -43,7 +44,7 @@ ack emoji 清單讀 `config.style.ack_emojis`;muted 清單讀 `config.muted_chan
 - 使用者口令(銷/回/記一下/看備忘等)仍由主 session 直接處理(只動 `state.json`,很輕);agent 掃描中收到口令,等該輪寫檔完成再執行,維持單一寫者
 - agent 連續失敗 2 次(MCP 斷線等)→ 該輪退回主 session 自己掃,下輪恢復派 agent
 
-### 1. 收集候選(4 路,不逐頻道讀;watchlist 除外)
+### 1. 收集候選(不逐頻道讀;watchlist 除外)
 
 1. **DM + mentions**:`slack_search_public_and_private` query `to:me`,`after=<last_run>`、`sort=timestamp`、`include_context=false`、`response_format=detailed`(要 permalink)。翻頁到取完或最多 3 頁;噪音大可拆 `channel_types=im` 與 `public_channel,private_channel` 兩路
 2. **已回判斷基準**:同參數搜 `from:<@config.user.user_id>`
@@ -51,6 +52,40 @@ ack emoji 清單讀 `config.style.ack_emojis`;muted 清單讀 `config.muted_chan
 4. **全 workspace @here/@channel**:search query `here`(**不加引號**,加引號搜不到),`only_my_channels=true`、`after`、`sort=timestamp`,只留原文含 `<!here>`/`<!channel>` 的;使用者自己發的略過
 5. **Bot DM 指令通道**(bot 有設定才跑):`slack_read_channel`(`config.bot.dm_channel_id`)。**使用者在裡面發的訊息 = 秘書指令**(「銷 N」「記一下」「看全部」「回 N」等口令與終端相同),執行後 bot 回一句確認(「✅ #12 已銷」)。bot 自己的訊息略過;非指令留言存進對應 item 備註或回覆收到
 6. **React 銷帳**(`open[]` 為空 → 本節含 pending 搜尋整段跳過):對 `config.style.ack_emojis` 每顆搜 `hasmy::<emoji>:`(**不加 `to:me`**——`to:me` 只涵蓋 DM/@提及,watchlist、@here、純頻道貼文來源的項目會漏銷;`after`=最舊 open 的 first_seen),命中結果比對 `open[]` 的 `<channel>:<ts>`,對得上 = 使用者已處理,自動銷帳(對不上的命中忽略)。帶膚色要搜 `:+1::skin-tone-N:` 完整寫法。**pending emoji 不銷帳**:對 `config.style.pending_emojis` 同法逐顆搜 `hasmy:`,命中 = 使用者回了「確認中」的 react → 不銷帳,item 標 `pending_since`(見第 2 節例外)
+7. **Thread 續追**(見 1.4)
+
+### 1.4 Thread 續追(補第 1 路的架構漏洞)
+
+第 1 路 `to:me` **只命中有 @ 你的那一則**;對方在同一 thread 裡後續繼續討論但沒再 tag,搜尋撈不到。更糟:你在那串回過一次,第 2 節「同對話有發言 = 已回」就把整組剔除了,之後那串再長也不會回來。本節專治這個。
+
+**入列**(自動,不需口令):
+- 任何**來源是 thread** 的 open 項(候選訊息帶 `thread_ts`)→ 建 item 時一併入列
+- `from:` 結果中你在某 thread 內的發言 → 該串入列(你參與過 = 你在局裡)
+- `config.muted_channels` 內的不入列;roll_calls 已在追的不重複入列(1.7 自己會讀)
+
+**資料** `watched_threads[]`:`{channel, thread_ts, last_seen_ts, summary, who, first_seen, source_num}`。
+
+**層 ① 每輪更新**(每串 1 次查詢;層 ② 的複查做法見 daily.md,判斷邏輯同此):`slack_read_thread(channel_id, message_ts=<thread_ts>, oldest=<last_seen_ts>, response_format="concise")`——**一定要帶 `oldest`**,只取上次看過之後的新訊息,不重讀整串(這是本節的成本關鍵)。
+
+- 你自己的新發言 → 更新 `last_seen_ts`,不開項(視同已回)
+- 他人新發言 → **逐則語意判斷**(不對整串下結論)是否在等你:問你、請你決定、點你名、丟東西要你看 → 該串對應的 open item **復活或新建**(新建走 `next_num`,`where` 標「thread 續追」);只是彼此討論/知會/閒聊 → 只更新 `last_seen_ts` 不開項
+- 判斷不出 → 開 P2 並備註「thread 有新討論,未確認是否需要你」,寧可多報
+
+**三層降頻**(不是「追」與「不追」二分,是按活躍度分三檔):
+
+| 層 | 條件 | 查詢頻率 | 存放 |
+|---|---|---|---|
+| ① 活躍追蹤 | `config.thread_watch.active_hours`(預設 72=3 天)內有他人新發言 | 每輪(跟主掃描) | `watched_threads[]` |
+| ② 觀察名單 | 超過 `active_hours` 沒動靜 | **只在開工包與下班結算各一次**(做法見 daily.md) | `observed_threads[]` |
+| ③ 真正不追 | 在觀察名單待滿 `observe_days`(預設 14 天)仍無新發言 | 不查 | 移除 |
+
+降到 ② 的串一有他人新發言就**復活回 ①**;落到 ③ 是純過期,不進 optout——之後有人 tag 你,照第 1 路重新入列。**「銷 N」只銷該次 item,不影響該串在哪一層**。
+
+**手動停追**(口令「停追串 N」)→ 從任一層立即移出,並記進 `thread_watch_optout[]`(存 `channel:thread_ts`)。之後對方 tag 你,那則**照常進清單**(被直接點名不能不報),但**不恢復續追**——否則「停追」口令被一次 tag 架空。使用者說「重新追這串 N」→ 移出 optout 並重新入列。這是與 ③ 過期的唯一差別:③ 會被 tag 叫醒,optout 不會。
+
+**上限**:`config.thread_watch.max_threads`(預設 20)。超過時保留優先級高的(P0>P1>P2,同級留新),被擠掉的在清單尾註一行「thread 續追已滿,N 串未追」——**不靜默截斷**。
+
+**想省量**:調 `schedule.scan_interval_min`(整體降頻,最有效)或把 `max_threads`/`observe_max` 調小;`thread_watch.enabled: false` 可整個關掉。**層 ① 一律跟主掃描走,不另設 thread 專屬掃描頻率**(兩套頻率會很亂);層 ② 固定掛在開工包與下班結算,不可調。
 
 ### 1.5 承諾偵測(掃使用者自己的訊息)
 
@@ -88,6 +123,8 @@ ack emoji 清單讀 `config.style.ack_emojis`;muted 清單讀 `config.muted_chan
 ### 2. 判斷待回覆
 
 依對話(DM/群組 DM/channel+thread)分組。最後一則候選之後使用者在**同一對話/thread**有發言 → 視為已回,整組剔除——這是**機械規則,不對發言內容做語意過濾**:夾在大量閒聊中的一句短回應(「額我找一下」)也算發言,不因對話整體像閒聊就判未回;唯一例外 = 下方「確認中」暫回。歸屬不明才用 `slack_read_thread` 補查,能省則省。
+
+**剔除 ≠ 結案**:被判已回而剔除的 thread 項,照 1.4 留在 `watched_threads[]` 續追——「這次回完了」不等於「這串完了」,對方後續在同串再問(即使沒 tag 你)仍會重新開項。
 
 **逐則檢視,不整段下結論**:凡需要語意判斷的場合(跨層回覆、點名追蹤 thread 判定等),訊息量大或內容混雜時**逐則**比對每一則發言是否構成回應,禁止對整段對話下「都是閒聊」的整體結論;拿不準 → 備註保留(附原文前 20 字),不判未回。
 
@@ -169,7 +206,7 @@ bot 識別:app `config.bot.app_id`,bot user `config.bot.bot_user_id`,DM 頻道 `
 | 模式掃描(間隔 `mode_scan_interval_min`;**不受午休影響**) | 會議/請假模式中 |
 | 一次性:會前提醒、會議開始切狀態、模式結束補掃、預約請假 | 照各節規則排,執行完即消 |
 
-**省量模式**:`config.schedule.profile` = "standard"(預設)/"eco"。eco 生效時:主掃描與模式掃描間隔 ×2(主掃至少 60 分)、bot DM 平時輪改增量(見 §4.4 輪型表)、**平時輪掃描 agent 降級用 Haiku**(派 agent 時 `model: "haiku"`;開工包/結算輪仍用 session 模型——大輪內容雜、誤判代價高)。覺得 Haiku 分級誤判變多 → 切回「標準模式」即恢復。P0 推播與口令回應不受影響。口令「**省量模式**」/「**標準模式**」即切換並寫回 config。**額度自動降頻**:掃描或擬稿遇到 usage/rate limit 類錯誤 → 當日臨時視同 eco 並 bot DM 告知「額度吃緊,今日已降頻」,隔天開工包恢復 config 設定值。
+**省量模式**:`config.schedule.profile` = "standard"(預設)/"eco"。eco 生效時:主掃描與模式掃描間隔 ×2(主掃至少 60 分)、bot DM 平時輪改增量(見 §4.4 輪型表)、**平時輪掃描 agent 降級用 Haiku**(派 agent 時 `model: "haiku"`;開工包/結算輪仍用 session 模型——大輪內容雜、誤判代價高)、**thread 續追上限減半**(`thread_watch.max_threads` 與 `observe_max` 各 ÷2 取整,見 1.4;不寫回 config,切回標準即復原)。覺得 Haiku 分級誤判變多 → 切回「標準模式」即恢復。P0 推播與口令回應不受影響。口令「**省量模式**」/「**標準模式**」即切換並寫回 config。**額度自動降頻**:掃描或擬稿遇到 usage/rate limit 類錯誤 → 當日臨時視同 eco 並 bot DM 告知「額度吃緊,今日已降頻」,隔天開工包恢復 config 設定值。
 
 cron 是 session 內記憶體,session 重開即消失,靠「上班」+本核對重建。此設計讓 session 重開、規則改版、模式異常殘留都在下一輪自癒。**「上班/onduty」啟動當下 state.json 寫 `duty_started: <今天日期>`**(只在使用者/bat 啟動時寫,cron 觸發的開工包與各輪不改)——結算用它判斷值班對話是否跨日(見 daily.md)。
 
@@ -316,6 +353,7 @@ cron 是 session 內記憶體,session 重開即消失,靠「上班」+本核對�
 - 「銷 3」「銷 3 5 8」「3 不用回」→ 移入 `dismissed`,一句確認
 - 「加待辦 X」「看待辦」「待辦完成 N」「刪待辦 N」→ 自記待辦清單(見〈我的待辦〉節,動 `my_todos`,與「銷 N」的 open 各自獨立)
 - 「追這則 <連結>」「誰沒回 N」「停追 N」→ 點名回覆追蹤(見流程 1.7,動 `roll_calls`)
+- 「停追串 N」「這串不用追了」→ thread 續追移出(見流程 1.4,動 `watched_threads`;與「停追 N」不同,那是點名追蹤)
 - 「回 3」「回 3:好,下午給你」→ 秘書擬稿(有給內容照寫),確認才發
 - 「看全部」/「例行的不用列」(文案進 `dismissed_patterns`)/「我慣用的 react 是 X」(更新 `config.style.ack_emojis`)
 - 「react 3 :+1:」「按 3 讚」→ 以使用者身分對該訊息按 react:user token `POST reactions.add`(`channel`/`timestamp` 取自 item 的 id,`name`=emoji 短碼去冒號,「讚」=+1,**「確認中」「請稍候」= `config.style.pending_emojis` 第一顆**如 :loading:)。成功後:emoji 屬 `ack_emojis` → 順帶銷帳;屬 `pending_emojis` → 標 pending;其他只按不銷。回 `missing_scope` → 引導使用者:app 的 OAuth 設定 User Token Scopes 加 `reactions:write` → Reinstall → `setx SLACK_USER_TOKEN` 新 token

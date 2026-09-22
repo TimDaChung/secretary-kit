@@ -2,6 +2,19 @@
 
 **本檔只在開工包與下班結算輪讀取**(平時輪不讀,省 token)。掃描主流程、bot DM 骨架與自檢見 SKILL.md;本檔定義兩個大輪的加碼項與專屬區塊。
 
+## Thread 觀察名單複查(兩大輪都做,骨架 ③ 之前)
+
+Thread 續追三層的第二層(定義見 SKILL.md 流程 1.4)。**只在開工包與下班結算各跑一次**,平時輪不碰——睡了三天的串不值得每 30 分查一次,但也不能就此失聯。
+
+對 `state.json observed_threads[]` 每串:`slack_read_thread(channel_id, message_ts=<thread_ts>, oldest=<last_seen_ts>, response_format="concise")`(**必帶 `oldest`**,多數會回 0 則)。
+
+1. **有他人新發言** → 移回 `watched_threads[]`(復活,恢復每輪追),並依 SKILL.md 1.4 的逐則語意判斷決定要不要開項;bot DM 該段列一行「♻️ <摘要> 有新討論,已恢復追蹤」
+2. **你自己的新發言** → 更新 `last_seen_ts` 留在觀察名單(你回了但沒人接話,還不算活躍)
+3. **回 0 則** → 留著不動
+4. **進觀察名單超過 `config.thread_watch.observe_days`(預設 14)天仍無任何新發言** → 移出,**真正不追**(不進 optout,純過期;之後若有人 tag 你,照第 1 路重新入列)
+
+**名單上限** `config.thread_watch.observe_max`(預設 50):滿了擠掉最舊的(`first_seen` 最早),擠掉的不另行通知。理由:14 天窗口 × 每天新進幾串會無聲累積,兩大輪各查一次 = 每串每天 2 次查詢,沒上限會讓成本失控。
+
 ## 晨間開工包(`config.schedule.morning_time`)
 
 bot 完整清單+隔夜變化+今日行程。**今日行程 = notes 今天的 ∪ Google 日曆今天的 events**(`list_events`,含週期事件如每週固定會議);會前提醒與切狀態 cron 以聯集排,重複的只排一次。**撞期偵測**:行程聯集內時間重疊的,行程段頂部標「⚠️ 撞期:<場次A> × <場次B>」,取捨由使用者決定,秘書不代決;**當天是請假日**(notes 有 auto_status)→ 行程段改標「🌴 請假日但有 N 場行程」並逐一列出,問要改期/取消/照開。「上班」在上班時間後才喊 → 第一掃直接當開工包。
