@@ -53,10 +53,12 @@ bot 完整清單+隔夜變化+今日行程。**今日行程 = notes 今天的 �
 4. 篩選(每個 item 的 `fields[]` 依 `column_id` 取值):
    - 指派:assignee_col 那格的 `user[]` 含「本人 ID」→ 留。本人 ID = report_lists 項的 `assignee_user_id`,**空則用 `config.user.user_id`(每人 config 都是自己,不寫死任何人)**。**多欄指派**:config 也可給 `assignee_cols`(陣列,如受託人+pm 兩欄)取代 `assignee_col`,任一欄含本人即留
    - 狀態:status_col 那格的 `select[0]` 經對照表轉 label,label ∈ `exclude_status` → 丟
-5. **與上次比對**(`state.json report_snapshots[<list_id>]`;該 list 無舊快照 = 首次啟用 → 全部不標記,只存快照)。`config.report_lists[].track_changes: false` 可關掉本步驟:
+5. **與上次比對**(`state.json report_snapshots[<list_id>]`;該 list 無舊快照 = 首次啟用 → 全部不標記,只存快照)。`config.report_lists[].track_changes: false` 可關掉本步驟。`quiet_status[]`(選填,預設空)= 轉入這些狀態時不發通知:
    - 舊快照沒有這個 item_id → **🆕 新指派給你**
    - status 變了 → **🔄 `<舊狀態>` → `<新狀態>`**
-   - 新狀態 ∈ `exclude_status`(通常是「完成」)→ **✅ 本輪列一次報喜**(格式 `✅ <摘要>｜已完成`),之後狀態不再變就自然不再出現
+   - 新狀態 ∈ `quiet_status` → **完全不通知**(球轉到別人手上,不是你的事了)。這類狀態通常同時列在 `exclude_status`,所以單子會安靜地從清單消失;停在該狀態期間每輪都安靜。**`quiet_status` 的判斷優先於下面兩條**
+   - 新狀態 ∈ `exclude_status` 且**不在** `quiet_status`(通常是「完成」)→ **✅ 本輪列一次報喜**(格式 `✅ <摘要>｜已完成`),之後狀態不再變就自然不再出現
+   - 從 `quiet_status` 狀態**轉回**一般狀態(如「測試中」→「完成等測試」)→ 照常標 **🔄**,單子重新出現在清單。此時 item 一直在快照裡,**不會被誤判成 🆕**——球回到你手上,該通知
    - 舊快照有、本次整份抓取中已不存在(非狀態變化,是真的不見了)→ **👋 `<摘要>` 已不在你名下**(改指派或單被刪)
    - 比對完**整份覆寫**該 list 的快照(= 這次看到的全貌)。不需額外 TTL:單還在 List 裡快照就留著,單被刪快照自然跟著消失,不會無限膨脹
 
