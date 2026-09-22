@@ -97,7 +97,7 @@
     ]
   },
   "report_lists": [],
-  "_comment_report_lists": "Slack List 回報單掃描(選配,預設不啟用)。每人 List/欄位/排除狀態都不同,由 secretary-setup 的「回報單掃描」選配關卡問答偵測後寫入,不要手抄別人的設定;需 user token 加 lists:read + files:read scope。",
+  "_comment_report_lists": "Slack List 回報單掃描(選配,預設不啟用)。每項可加 track_changes(預設 true)= 比對上次快照報出新指派/狀態變動/完成/已不在你名下,零額外 API 呼叫。每人 List/欄位/排除狀態都不同,由 secretary-setup 的「回報單掃描」選配關卡問答偵測後寫入,不要手抄別人的設定;需 user token 加 lists:read + files:read scope。",
   "auto_reply_config": {
     "_comment": "狀態自動回覆開關,兩者獨立。false = 只切狀態不自動回覆。",
     "meeting": true,

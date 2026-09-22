@@ -49,12 +49,21 @@ bot 完整清單+隔夜變化+今日行程。**今日行程 = notes 今天的 �
 每個 report_lists 項的處理(Bash curl):
 1. 取欄位對照:GET `files.info?file=<list_id>`,從 `file.list_metadata.schema` 建 status_col 的 option value → label 對照表
 2. 翻頁取全部項目:GET `slackLists.items.list?list_id=<list_id>&limit=100`,用 `response_metadata.next_cursor` 續頁(`&cursor=<urlencoded>`)直到無 cursor(上限 ~50 頁)
-3. 篩選(每個 item 的 `fields[]` 依 `column_id` 取值):
+3. **存快照(篩狀態之前做)**:把**所有指派給本人的** item 記成 `{item_id: {status, name}}`——**不套 `exclude_status`**。理由:若只存篩後結果,單子一變「完成」就從快照消失,無法分辨「做完了」還是「改指派給別人了」
+4. 篩選(每個 item 的 `fields[]` 依 `column_id` 取值):
    - 指派:assignee_col 那格的 `user[]` 含「本人 ID」→ 留。本人 ID = report_lists 項的 `assignee_user_id`,**空則用 `config.user.user_id`(每人 config 都是自己,不寫死任何人)**。**多欄指派**:config 也可給 `assignee_cols`(陣列,如受託人+pm 兩欄)取代 `assignee_col`,任一欄含本人即留
    - 狀態:status_col 那格的 `select[0]` 經對照表轉 label,label ∈ `exclude_status` → 丟
-4. 輸出區塊(標題用 `section_title`;無符合項則整段不出現):
-   `• <摘要>｜<狀態>｜連結`
-   - 摘要 = name_col 那格的 text;狀態 = 轉出的 label
+5. **與上次比對**(`state.json report_snapshots[<list_id>]`;該 list 無舊快照 = 首次啟用 → 全部不標記,只存快照)。`config.report_lists[].track_changes: false` 可關掉本步驟:
+   - 舊快照沒有這個 item_id → **🆕 新指派給你**
+   - status 變了 → **🔄 `<舊狀態>` → `<新狀態>`**
+   - 新狀態 ∈ `exclude_status`(通常是「完成」)→ **✅ 本輪列一次報喜**(格式 `✅ <摘要>｜已完成`),之後狀態不再變就自然不再出現
+   - 舊快照有、本次整份抓取中已不存在(非狀態變化,是真的不見了)→ **👋 `<摘要>` 已不在你名下**(改指派或單被刪)
+   - 比對完**整份覆寫**該 list 的快照(= 這次看到的全貌)。不需額外 TTL:單還在 List 裡快照就留著,單被刪快照自然跟著消失,不會無限膨脹
+
+6. 輸出區塊(標題用 `section_title`;無符合項**且無任何變化**則整段不出現):
+   `• <變化標記> <摘要>｜<狀態>｜連結`
+   - 摘要 = name_col 那格的 text;狀態 = 轉出的 label;無變化的項不加標記,照舊列出
+   - ✅ 與 👋 兩類是**當輪一次性通知**(它們已不在待處理清單內),列在該區塊末尾
    - 連結 URL = `<config.workspace_url>/lists/<team_id>/<list_id>?record_id=<item.id>`(格式待實測;跳不到單筆退用整表連結),**格式依 SKILL.md §4.4 自檢第 3 條用 `<url|連結>` 兩字藍連結**;全形冒號規範同 §4.4 自檢
 
 注意:API 呼叫較重(每項 List 約 1 次 files.info + 數次翻頁),故只在開工包/結算跑。

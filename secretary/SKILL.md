@@ -25,6 +25,7 @@ description: Slack 待回覆秘書(通用版)。掃描 DM + mentions + watchlist
 - `my_todos[]`(自記待辦,見〈我的待辦〉)與計數器 `my_todos_next`
 - `roll_calls[]`(點名回覆追蹤,見流程 1.7;`num` 與 open[] 共用 `next_num`)
 - thread 續追三層(見流程 1.4):`watched_threads[]`(活躍,每輪追)、`observed_threads[]`(觀察名單,只在兩大輪複查,見 daily.md)、`thread_watch_optout[]`(手動停追,不因再被 tag 而復活)
+- `report_snapshots`(回報單狀態快照 `{<list_id>: {<item_id>: {status, name}}}`,供變化比對,見 daily.md〈Slack List 回報單掃描〉)
 - `mode_scan_interval_min` 執行期覆寫值、`cron_jobs`(見各節)
 - `session_first_scan_done`:新 session 由「上班」重設為 false
 - 檔案不存在 → 以 24 小時前為掃描起點;有 `last_run` → **一律以 last_run 為起點(上限 7 天前)**——週一自然補掃週末、假期後自然補掃整段
@@ -350,7 +351,7 @@ cron 是 session 內記憶體,session 重開即消失,靠「上班」+本核對�
 
 ## Slack List 回報單掃描(report_lists)
 
-只在開工包/結算跑,完整規範見 daily.md〈Slack List 回報單掃描〉;設定由 secretary-setup 選配關卡寫入 `config.report_lists[]`(預設空 = 不啟用)。
+只在開工包/結算跑,完整規範見 daily.md〈Slack List 回報單掃描〉;設定由 secretary-setup 選配關卡寫入 `config.report_lists[]`(預設空 = 不啟用)。**會比對上次快照報出變化**(新指派/狀態變動/完成/已不在你名下),零額外 API 呼叫;`track_changes: false` 可關。
 
 ## 使用者指令(編號操作)
 
