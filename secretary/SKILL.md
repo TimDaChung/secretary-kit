@@ -359,7 +359,7 @@ cron 是 session 內記憶體,session 重開即消失,靠「上班」+本核對�
 
 ## Slack List 回報單掃描(report_lists)
 
-只在開工包/結算跑,完整規範見 daily.md〈Slack List 回報單掃描〉;設定由 secretary-setup 選配關卡寫入 `config.report_lists[]`(預設空 = 不啟用)。**會比對上次快照報出變化**(新指派/狀態變動/完成/已不在你名下),零額外 API 呼叫;`track_changes: false` 可關。
+只在開工包/結算跑,完整規範見 daily.md〈Slack List 回報單掃描〉;設定由 secretary-setup 選配關卡寫入 `config.report_lists[]`(預設空 = 不啟用)。**會比對上次快照報出變化**(新指派/狀態變動/完成/已不在你名下),零額外 API 呼叫;`track_changes: false` 可關,`quiet_status[]` 可指定「轉入就不通知」的中間態。
 
 ## 使用者指令(編號操作)
 
