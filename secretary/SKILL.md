@@ -75,7 +75,7 @@ ack emoji 清單讀 `config.style.ack_emojis`;muted 清單讀 `config.muted_chan
 
 | 層 | 條件 | 查詢頻率 | 存放 |
 |---|---|---|---|
-| ① 活躍追蹤 | `config.thread_watch.active_hours`(預設 72=3 天)內有他人新發言 | 每輪(跟主掃描) | `watched_threads[]` |
+| ① 活躍追蹤 | `config.thread_watch.active_hours`(預設 72=3 天)內有他人新發言 | 每輪(跟主掃描) | `watched_threads[]`(上限 50) |
 | ② 觀察名單 | 超過 `active_hours` 沒動靜 | **只在開工包與下班結算各一次**(做法見 daily.md) | `observed_threads[]` |
 | ③ 真正不追 | 在觀察名單待滿 `observe_days`(預設 14 天)仍無新發言 | 不查 | 移除 |
 
@@ -83,7 +83,7 @@ ack emoji 清單讀 `config.style.ack_emojis`;muted 清單讀 `config.muted_chan
 
 **手動停追**(口令「停追串 N」)→ 從任一層立即移出,並記進 `thread_watch_optout[]`(存 `channel:thread_ts`)。之後對方 tag 你,那則**照常進清單**(被直接點名不能不報),但**不恢復續追**——否則「停追」口令被一次 tag 架空。使用者說「重新追這串 N」→ 移出 optout 並重新入列。這是與 ③ 過期的唯一差別:③ 會被 tag 叫醒,optout 不會。
 
-**上限**:`config.thread_watch.max_threads`(預設 20)。超過時保留優先級高的(P0>P1>P2,同級留新),被擠掉的在清單尾註一行「thread 續追已滿,N 串未追」——**不靜默截斷**。
+**上限**:`config.thread_watch.max_threads`(預設 50)。超過時保留優先級高的(P0>P1>P2,同級留新),被擠掉的在清單尾註一行「thread 續追已滿,N 串未追」——**不靜默截斷**。
 
 **想省量**:調 `schedule.scan_interval_min`(整體降頻,最有效)或把 `max_threads`/`observe_max` 調小;`thread_watch.enabled: false` 可整個關掉。**層 ① 一律跟主掃描走,不另設 thread 專屬掃描頻率**(兩套頻率會很亂);層 ② 固定掛在開工包與下班結算,不可調。
 

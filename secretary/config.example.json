@@ -59,7 +59,7 @@
     "_comment": "Thread 續追三層(見 SKILL.md 流程 1.4 + daily.md):對方在 thread 裡後續沒再 tag 你的討論也追。enabled=false 整個關掉。active_hours = 幾小時內有人講話算「活躍」,活躍的每輪追(預設 72=3 天);超過就降到觀察名單,只在開工包與下班結算各查一次,有人講話就復活。observe_days = 在觀察名單待幾天都沒動靜就真正不追(預設 14)。max_threads / observe_max = 兩層各自的同時追蹤上限(eco 省量模式自動減半)。想省量優先調 schedule.scan_interval_min(整體降頻最有效),其次調小上限。觀察名單沒有獨立掃描時間,固定掛在兩大輪。",
     "enabled": true,
     "active_hours": 72,
-    "max_threads": 20,
+    "max_threads": 50,
     "observe_days": 14,
     "observe_max": 50
   },
