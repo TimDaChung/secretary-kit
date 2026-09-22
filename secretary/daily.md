@@ -4,7 +4,7 @@
 
 ## Thread 觀察名單複查(兩大輪都做,骨架 ③ 之前)
 
-Thread 續追三層的第二層(定義見 SKILL.md 流程 1.4)。**只在開工包與下班結算各跑一次**,平時輪不碰——睡了三天的串不值得每 30 分查一次,但也不能就此失聯。
+Thread 續追三層的第二層(定義見 SKILL.md 流程 1.4)。**只在開工包與下班結算各跑一次**,平時輪不碰——睡了三天的串不值得每輪都查(預設每小時),但也不能就此失聯。
 
 對 `state.json observed_threads[]` 每串:`slack_read_thread(channel_id, message_ts=<thread_ts>, oldest=<last_seen_ts>, response_format="concise")`(**必帶 `oldest`**,多數會回 0 則)。
 
