@@ -66,7 +66,8 @@ ack emoji 清單讀 `config.style.ack_emojis`;muted 清單讀 `config.muted_chan
 - `from:` 結果中你在某 thread 內的發言 → 該串入列(你參與過 = 你在局裡)
 - `config.muted_channels` 內的不入列;roll_calls 已在追的不重複入列(1.7 自己會讀)
 
-**資料** `watched_threads[]`:`{channel, thread_ts, last_seen_ts, summary, who, first_seen, source_num}`。
+**資料** `watched_threads[]`:`{channel, thread_ts, last_seen_ts, summary, who, first_seen, source_num, link}`。
+`observed_threads[]` 同樣帶 `link`。**`link` = 該串的 permalink（`chat.getPermalink` 取 `thread_ts` 那則，會回帶 `?thread_ts=&cid=` 的完整網址），入列當下就存。** 少存這欄，之後要報這串時只能拿 channel 拼一個頻道連結出來，點了到不了那一串（2026-09-24 Tim 回報「秘書給的連結是錯的位置」即此）。
 
 **層 ① 每輪更新**(每串 1 次查詢;層 ② 的複查做法見 daily.md,判斷邏輯同此):`slack_read_thread(channel_id, message_ts=<thread_ts>, oldest=<last_seen_ts>, response_format="concise")`——**一定要帶 `oldest`**,只取上次看過之後的新訊息,不重讀整串(這是本節的成本關鍵)。
 
@@ -157,7 +158,16 @@ watchlist/@here 預設:watchlist 頻道 → 至少 P1(各頻道的 `note` 註記
 
 每項帶編號,P0→P2 排序:`#8 🔴 P0 | 王小明(DM) | 一句摘要 | 10:19 | 連結`
 
-**每項必存 `link`**(search detailed 拿 permalink;拿不到退存 `<config.workspace_url>/archives/<channel_id>`)。P0/P1 輸出一律附連結,且**一律短藍字、不貼整串裸 URL**:Slack 訊息用 `<url|連結>`,終端輸出用 `[連結](url)`(2026-09-17 Tim 拍板:當日 10:08 開工包的兩字藍連結格式為固定標準)。
+**每項必存 `link`**,規則如下（連結指錯位置＝這條沒守好）:
+
+1. **一律存 API 回傳的 permalink 原樣**(search detailed 的 `permalink`,或 `chat.getPermalink`),**含整串 query string 不得裁切**
+2. **絕對不要用 `channel + ts` 自己拼連結**。thread 內的訊息,正確 permalink 長這樣:
+   `…/archives/<ch>/p<訊息ts>?thread_ts=<串根ts>&cid=<ch>`
+   **串根 ts 與訊息 ts 常常差很遠**(實測：訊息 `1790065718.501899` 的串根是 `1788847271.645089`)。少了 `thread_ts` 與 `cid`,Slack **不會開那一串**,只會把人丟到頻道——這就是「連結點了到錯位置」的成因
+3. 手上只有 channel+ts → **呼叫 `chat.getPermalink` 補**(`GET https://slack.com/api/chat.getPermalink?channel=<ch>&message_ts=<ts>`),不要略過
+4. **禁止用純頻道連結充數**(`…/archives/<channel_id>` 沒有訊息 ts)。點了只會落在頻道最新訊息,比沒有連結更誤導。真的沒有單一來源訊息(自己記的 notes、跨多則的承諾彙整)→ **不附連結**,改寫來源頻道名,例如「(來源:與 Sheena 的 DM,無單一訊息)」
+
+P0/P1 輸出一律附連結,且**一律短藍字、不貼整串裸 URL**:Slack 訊息用 `<url|連結>`,終端輸出用 `[連結](url)`(2026-09-17 Tim 拍板:當日 10:08 開工包的兩字藍連結格式為固定標準)。
 
 - 本 session 第一掃(`session_first_scan_done` false):完整清單含 P2,結尾標 true
 - 之後輪次:只列**新增/升級的 P0/P1**,其餘壓一行「另有 N 項掛著(#3 #5),說『看全部』展開」
