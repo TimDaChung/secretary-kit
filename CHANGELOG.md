@@ -1,5 +1,20 @@
 # CHANGELOG
 
+## v1.20.1 (2026-09-30)
+
+prompt audit 修 7 處「照現文執行會做錯」的分歧（setup 停在 9/10 初版、SKILL.md 9/17–9/24 改版後兩邊不一致）：
+
+- **setup 必填欄位對齊 SKILL.md 啟動檢查**：原本把 bot／watchlist 當必填、漏了 `user.name` 與 `workspace_url`——通過精靈的人 SKILL.md 啟動即停。現在同一份清單：`user.user_id`、`user.name`、`workspace_url`、`schedule`；`bot` 三欄全填或全空、`watchlist` 非必填
+- **setup 掃描頻率預設改 60 分**（原寫 30 分，與 config.example 不符），並指向 `scan_mode: fixed`
+- **setup 診斷編號↔關卡編號對照表**：兩套編號不同，原文「進入該關教學」會開錯關
+- **setup scope 驗證補 `reactions:read`**：點名追蹤要用，manifest 與結算健檢都有、精靈漏驗
+- **setup 啟動器安裝移到試跑三步之後**並重編號 4–6（原本排在前面且兩組都編 1–3）
+- **值班終端模型固定讀 `config.model.session`、預設 sonnet、精靈不代改**：原文教人手動 `claude --model sonnet`；想換的人自己跟秘書說「秘書用 <模型>」
+- **SKILL.md 終端增量摘要與 §4.4 bot DM 規則分開**：原本同檔兩條相反（§4 增量 vs §4.4 平時輪 ② 必列完整），9/10 已因此違規一次；現在標明 §4 只管終端顯示
+- **升級後檢查改為比對桌面 bat 內容**：原本只在「桌面沒有 bat」才提醒，v1.19.0 換過 bat 格式後，已有舊 bat 的人永遠不會被提醒、「秘書用 <模型>」對他們無效
+
+⚙️ **升級動作**：`git pull` 後生效。秘書會在升級後檢查主動比對桌面 bat，舊版會問要不要更新——答「要」即可。無新 scope、無額度增量
+
 ## v1.20.0 (2026-09-24)
 
 - **修正連結指到錯位置**（Tim 回報）：thread 內訊息的連結少了 `?thread_ts=&cid=`，Slack 不會開那一串、只把人丟到頻道。成因是用 `channel + ts` 自己拼網址——**串根 ts 與訊息 ts 常常差很遠**（實測：訊息 `1790065718.501899` 的串根是 `1788847271.645089`），拼出來的網址必定指錯
@@ -20,7 +35,7 @@
 - 實測 7 情境全過:fable/sonnet/opus/haiku 各自正確讀出,無 model 區塊、config 損毀、config 不存在三種 fallback 皆回 sonnet
 - 踩坑記錄:`for /f` 反引號內的管線**不可**跳脫成 `^|`,否則 PowerShell 收到字面 `^` 解析失敗、靜默走 fallback(排查時誤判成 BOM 問題);bat 內註解已標註
 
-⚙️ **升級動作**:`git pull` 後,**桌面那支 `secretary-start.bat` 要重新複製一次**(`cp ~/.claude/skills/secretary-kit 路徑/secretary-start.bat 到桌面`,或跟秘書說「更新桌面啟動檔」)——這是最後一次,之後換模型都只改 config。不重新複製的話舊 bat 仍寫死 sonnet,功能照常、只是換不了模型。config 缺 `model` 區塊視同全預設,行為與 v1.18.1 相同
+⚙️ **升級動作**:`git pull` 後,**桌面那支 `secretary-start.bat` 要重新複製一次**(從 repo 根 `secretary-start.bat` 複製到桌面,或跟秘書說「更新桌面啟動檔」)——這是最後一次,之後換模型都只改 config。不重新複製的話舊 bat 仍寫死 sonnet,功能照常、只是換不了模型。config 缺 `model` 區塊視同全預設,行為與 v1.18.1 相同
 
 
 ## v1.18.1 (2026-09-22)
