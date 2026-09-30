@@ -16,14 +16,14 @@ description: 個人 Slack 秘書安裝精靈。引導使用者從零裝好自己
 
 ## 進度診斷(每次啟動先跑,依序檢查)
 
-第一個 ❌ 就是當前關卡,輸出 checklist 後直接進入該關教學:
+第一個 ❌ 就是當前卡點,輸出 checklist 後直接進入對應教學(診斷編號與關卡編號不是同一套:診斷 1→關卡 1、2→關卡 2–3、3→關卡 4、4→關卡 5、5→回關卡 2/3 查 bot token 與 `im:write`、6→關卡 6、7→關卡 7):
 
 1. **技能檔案**:`~/.claude/skills/secretary/SKILL.md` 與 `config.json` 存在?
 2. **Bot token**:環境變數 `SLACK_BOT_TOKEN` 讀得到?`curl auth.test` 回 `ok:true`?(順手記下 bot 的 `user_id`)
 3. **Slack MCP**:ToolSearch 查 `mcp__claude_ai_Slack__slack_search_users` 可用?可用就搜自己名字驗證+記下自己的 user ID
 4. **Google Calendar MCP**(選配):ToolSearch 查 `mcp__claude_ai_Google_Calendar__list_calendars`;沒連只提醒「日曆功能停用」,不擋關
 5. **Bot DM 通道**:用 bot token `conversations.open`(users=自己的 user ID)→ 發一句測試訊息成功?
-6. **config.json 完成度**:必填欄位(user_id / bot 資訊 / watchlist / 作息時間)都有值?
+6. **config.json 完成度**:必填欄位 `user.user_id`、`user.name`、`workspace_url`、`schedule` 都有值?(與 secretary/SKILL.md 啟動檢查同一份清單)`bot` 三欄要嘛全填、要嘛全空——全空 = 停用 bot DM 報告,不擋關;`watchlist` 建議至少一個但非必填
 7. 全過 → 進「試跑」
 
 輸出格式:
@@ -121,7 +121,7 @@ settings:
 setx SLACK_BOT_TOKEN "xoxb-你的token"
 setx SLACK_USER_TOKEN "xoxp-你的token"
 ```
-然後**完全關掉 Claude Code 終端重開**(setx 只對新視窗生效)。重開後打「檢查安裝進度」,精靈用 `auth.test` 分別驗兩顆:xoxb 應回 bot 名、xoxp 應回本人帳號,並檢查 xoxp 的 `x-oauth-scopes` 含 `reactions:write`、`users.profile:write`、`users.profile:read`、`chat:write`(舊裝機缺 `users.profile:read` 不擋關——切狀態改走 Slack MCP 讀現況,此 scope 只是備援);驗證失敗最常見原因是兩顆設反——對調重設即可。
+然後**完全關掉 Claude Code 終端重開**(setx 只對新視窗生效)。重開後打「檢查安裝進度」,精靈用 `auth.test` 分別驗兩顆:xoxb 應回 bot 名、xoxp 應回本人帳號,並檢查 xoxp 的 `x-oauth-scopes` 含 `reactions:write`、`reactions:read`、`users.profile:write`、`users.profile:read`、`chat:write`(舊裝機缺 `users.profile:read` 或 `reactions:read` 不擋關——前者切狀態改走 Slack MCP 讀現況、後者點名追蹤退化為只看 thread 回覆,結算整合健檢會提示補);驗證失敗最常見原因是兩顆設反——對調重設即可。
 
 ### 關卡 4:連 Slack MCP(你的個人帳號)
 1. 在 Claude Code 輸入 `/mcp` 看 claude.ai Slack 連線狀態
@@ -136,21 +136,22 @@ setx SLACK_USER_TOKEN "xoxp-你的token"
 - `user_id`:我用 Slack MCP 搜你名字直接填
 - `bot`:app ID / bot user ID(從 auth.test 拿)/ bot DM 頻道 ID(關卡 5 診斷時 conversations.open 拿到的)
 - `watchlist`:問「哪些頻道的訊息你一定要知道?」(建議 2-4 個,我幫查頻道 ID)
-- `schedule`:開工包/下班結算時間、掃描頻率(預設 09:03 / 18:27 / 30 分)
+- `schedule`:開工包/下班結算時間、掃描頻率(預設 09:03 / 18:27 / 每 60 分;要固定幾點掃的改 `scan_mode: fixed` + `scan_times`,見 config.example.json 說明)
 - `deputies`:請假時的代理人對照(可留空)
 - `style`:語氣微調幾行(可留空 = 預設官方客氣語氣)+慣用 ack emoji
 
 ### 關卡 7:試跑
 
-先提醒使用者:值班是長時間自動任務,建議用 Sonnet(`claude --model sonnet` 啟動或 `/model sonnet`);Pro 方案另可用口令「省量模式」降低用量。
+先提醒使用者:值班是長時間自動任務,值班終端的模型**固定由 `config.model.session` 決定,預設 sonnet**(啟動器 bat 讀取;精靈不代改,使用者自己想換才跟秘書說「秘書用 <模型>」);不用 bat、手動 `claude` 啟動的人要自己帶 `--model sonnet`。Pro 方案另可用口令「省量模式」降低用量。
 
-**啟動器安裝(試跑通過後收尾,精靈代做)**:
-1. 複製 repo 根的 `secretary-start.bat` 到使用者桌面(**模型讀 `config.model.session`,預設 Sonnet**,之後換模型改 config 即可、不用重新複製 bat;含退出紀錄。檔名可改但**必須保持英數**——中文檔名+編碼問題會讓 cmd 閃退)
-2. 問使用者「要不要開機自動值班?」要 → 再複製一份到 `%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\`;不要 → 跳過,之後隨時可補
-3. 告知:之後上班雙擊桌面 bat 即可;視窗若異常關閉,死因記錄在 `~/.claude/secretary-exit.log`
 1. 發 bot DM:「🤖 你的秘書裝好了」→ 請使用者確認手機有跳通知
 2. 跑一次完整掃描,產出第一份待回覆清單
 3. 教三個口令就好:**「上班」**(開自動掃描)、**「下班」**、**「銷 N」**;其餘讓他用了再學
+
+**啟動器安裝(以上三步通過後收尾,精靈代做)**:
+4. 複製 repo 根的 `secretary-start.bat` 到使用者桌面(**模型讀 `config.model.session`,預設 Sonnet**,之後換模型改 config 即可、不用重新複製 bat;含退出紀錄。檔名可改但**必須保持英數**——中文檔名+編碼問題會讓 cmd 閃退)
+5. 問使用者「要不要開機自動值班?」要 → 再複製一份到 `%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\`;不要 → 跳過,之後隨時可補
+6. 告知:之後上班雙擊桌面 bat 即可;視窗若異常關閉,死因記錄在 `~/.claude/secretary-exit.log`
 
 ### 選配關卡:回報單掃描(Slack List)
 
