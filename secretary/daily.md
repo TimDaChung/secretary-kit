@@ -34,7 +34,11 @@ bot 完整清單+隔夜變化+今日行程。**今日行程 = notes 今天的 �
 
 **跨日重開提醒(結算時查)**:`state.json duty_started`(SKILL.md〈排程核對〉:「上班/onduty」啟動當下寫入,cron 輪不改)早於今天 → 結算 DM 加一行「♻️ 這條值班對話已連跑 N 天,建議下班把終端視窗關掉,明天開機自啟全新 session(待辦/備忘都存檔案,不會丟)」。理由:對話越長,每輪掃描重讀的歷史越大(實測跨 2 天的 session 每請求重讀量翻倍)。當天啟動的 session 不提醒。
 
-**state 清理(結算時做,不進 DM)**:`dismissed[]` 中訊息時間超過 14 天的項目移除——id 格式 `<channel_id>:<message_ts>`,直接用 ts 判齡;掃描起點上限 7 天前,這些 id 永遠不可能再被比對到,留著只是每輪陪讀陪寫。`dismissed_patterns[]`(文字黑名單)**不清**,那是永久偏好。
+**state 清理(結算時做,不進 DM)**,四項:
+1. `dismissed[]` 中訊息時間超過 14 天的項目移除——id 格式 `<channel_id>:<message_ts>`,直接用 ts 判齡;掃描起點上限 7 天前,這些 id 永遠不可能再被比對到,留著只是每輪陪讀陪寫。`dismissed_patterns[]`(文字黑名單)**不清**,那是永久偏好
+2. `notes[]`:`date` 已過的事件型備忘移除(當天與未來的留;寫日期區間的以區間末日判);**任何內容是輪次紀錄/掃描過程/狀態確認的 note 一律移除**——它們本來就不該存在(SKILL.md〈個人備忘〉明禁)
+3. `watched_threads[]` 與 `observed_threads[]` 的 `summary` 超過 80 字 → **改寫**成 ≤80 字一句話(保留能認出這串的人名與主題,不是硬截斷)
+4. skill 目錄若殘留 `tmp_*.json` 暫存檔 → 刪除(正常流程不該留下,見下方回報單掃描第 2 步)
 
 **整合健檢(結算尾段,一項一行)**:檢查五條整合——Slack MCP(必備)、bot token(`auth.test`)、user token 及其 scopes(`users.profile:write`/`reactions:write`/`reactions:read`,另 report_lists 有啟用時查 `lists:read`+`files:read`;看 auth.test 回應標頭)、Calendar MCP、Gmail MCP。缺的列「⚙️ 未串:<項目>(<失效的功能>)——要裝打『檢查安裝進度』,不想用回『<項目> 不用了』」;使用者回「X 不用了」→ 寫入 `config.disabled_integrations[]`,之後不再提醒。**故意關的不提醒**:bot 三欄全空、auto_reply 開關 false、已列入 disabled_integrations 的一律跳過;全部健康 → 這段不出現。
 
@@ -48,7 +52,7 @@ bot 完整清單+隔夜變化+今日行程。**今日行程 = notes 今天的 �
 
 每個 report_lists 項的處理(Bash curl):
 1. 取欄位對照:GET `files.info?file=<list_id>`,從 `file.list_metadata.schema` 建 status_col 的 option value → label 對照表
-2. 翻頁取全部項目:GET `slackLists.items.list?list_id=<list_id>&limit=100`,用 `response_metadata.next_cursor` 續頁(`&cursor=<urlencoded>`)直到無 cursor(上限 ~50 頁)
+2. 翻頁取全部項目:GET `slackLists.items.list?list_id=<list_id>&limit=100`,用 `response_metadata.next_cursor` 續頁(`&cursor=<urlencoded>`)直到無 cursor(上限 ~50 頁)。**回應需落檔時一律寫系統暫存目錄**(Bash `$TEMP`,檔名帶 list_id 與頁碼),該 list 處理完**立即刪除**;**禁止寫在 skill 目錄**(2026-09-30 組員回報:skill 目錄累積 9 個 `tmp_items_page*.json` 共 1.6MB 無人清)
 3. **存快照(篩狀態之前做)**:把**所有指派給本人的** item 記成 `{item_id: {status, name}}`——**不套 `exclude_status`**。理由:若只存篩後結果,單子一變「完成」就從快照消失,無法分辨「做完了」還是「改指派給別人了」
 4. 篩選(每個 item 的 `fields[]` 依 `column_id` 取值):
    - 指派:assignee_col 那格的 `user[]` 含「本人 ID」→ 留。本人 ID = report_lists 項的 `assignee_user_id`,**空則用 `config.user.user_id`(每人 config 都是自己,不寫死任何人)**。**多欄指派**:config 也可給 `assignee_cols`(陣列,如受託人+pm 兩欄)取代 `assignee_col`,任一欄含本人即留
