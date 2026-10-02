@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## v1.22.0 (2026-10-02)
+
+- **安裝精靈新增關卡 7:Claude Code 權限白名單**(Tim 端回報):值班每輪都呼叫 `CronCreate` / `CronList` / `CronDelete` / `PushNotification` / `ToolSearch`,這 5 個內建工具沒進 `~/.claude/settings.json` 的 `permissions.allow` 就每次跳「允許?」,人不在終端前整輪卡死。掃 50 份值班 transcript 實測:CronCreate 152 次、ToolSearch 178 次。kit 從第一版到現在都沒教這一步,所有裝機者都在同一狀態。流程:精靈 Read 檔判定(不能用 ToolSearch,有無白名單都查得到)→ 先講一句再 Edit 補缺的條目 → 被擋(auto 模式分類器對 settings.json 自我修改一律拒絕,口頭授權無效,要先 Shift+Tab 切 default)就退手動印片段或 `/permissions` → 重開 session 才生效。原「試跑」改關卡 8
+- 安裝說明流程圖加第 8 步、疑難排解加「值班一直停在允許提示」一列
+- 精靈原則「不碰使用者 settings」加唯一例外(只增不刪、先講再改、被擋退手動)
+
+⚙️ **升級動作**:`git pull` 後秘書 Read `~/.claude/settings.json`,`permissions.allow` 缺上述任一條 → 照 secretary-setup 關卡 7 步驟 2–5 補(先講一句、使用者按允許;被擋就印 5 行請使用者自己貼或走 `/permissions`,**不重試不繞**);5 條都在則略過。改完提醒**重開 Claude Code session 才生效**。無新 scope、無額度增量
+
 ## v1.21.0 (2026-10-01)
 
 靜默成本四修——每輪固定讀取逐日膨脹、不報錯、看不見。(a)(b)(c) 為**組員 Gary 回報**(值班一天的工具呼叫量測,回報品質佳:有基準數字、有行號根因、有效益估算);(d) 為 Tim 端收單時實測新發現:

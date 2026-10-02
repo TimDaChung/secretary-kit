@@ -16,7 +16,7 @@ description: 個人 Slack 秘書安裝精靈。引導使用者從零裝好自己
 
 ## 進度診斷(每次啟動先跑,依序檢查)
 
-第一個 ❌ 就是當前卡點,輸出 checklist 後直接進入對應教學(診斷編號與關卡編號不是同一套:診斷 1→關卡 1、2→關卡 2–3、3→關卡 4、4→關卡 5、5→回關卡 2/3 查 bot token 與 `im:write`、6→關卡 6、7→關卡 7):
+第一個 ❌ 就是當前卡點,輸出 checklist 後直接進入對應教學(診斷編號與關卡編號不是同一套:診斷 1→關卡 1、2→關卡 2–3、3→關卡 4、4→關卡 5、5→回關卡 2/3 查 bot token 與 `im:write`、6→關卡 6、7→關卡 7、8→關卡 8):
 
 1. **技能檔案**:`~/.claude/skills/secretary/SKILL.md` 與 `config.json` 存在?
 2. **Bot token**:環境變數 `SLACK_BOT_TOKEN` 讀得到?`curl auth.test` 回 `ok:true`?(順手記下 bot 的 `user_id`)
@@ -24,14 +24,15 @@ description: 個人 Slack 秘書安裝精靈。引導使用者從零裝好自己
 4. **Google Calendar MCP**(選配):ToolSearch 查 `mcp__claude_ai_Google_Calendar__list_calendars`;沒連只提醒「日曆功能停用」,不擋關
 5. **Bot DM 通道**:用 bot token `conversations.open`(users=自己的 user ID)→ 發一句測試訊息成功?
 6. **config.json 完成度**:必填欄位 `user.user_id`、`user.name`、`workspace_url`、`schedule` 都有值?(與 secretary/SKILL.md 啟動檢查同一份清單)`bot` 三欄要嘛全填、要嘛全空——全空 = 停用 bot DM 報告,不擋關;`watchlist` 建議至少一個但非必填
-7. 全過 → 進「試跑」
+7. **權限白名單**:`~/.claude/settings.json` 的 `permissions.allow` 陣列含 `CronCreate`、`CronList`、`CronDelete`、`PushNotification`、`ToolSearch` 五條?(**用 Read 讀檔判定,不能用 ToolSearch**——有無白名單工具都查得到,差別只在呼叫時跳不跳允許提示)
+8. 全過 → 進「試跑」
 
 輸出格式:
 ```
 ✅ 1. 技能檔案
 ✅ 2. Bot token
 ❌ 3. Slack MCP ← 你卡在這
-⬜ 4-7 (後面的關卡)
+⬜ 4-8 (後面的關卡)
 ```
 
 ## 關卡教學
@@ -140,7 +141,24 @@ setx SLACK_USER_TOKEN "xoxp-你的token"
 - `deputies`:請假時的代理人對照(可留空)
 - `style`:語氣微調幾行(可留空 = 預設官方客氣語氣)+慣用 ack emoji
 
-### 關卡 7:試跑
+### 關卡 7:Claude Code 權限白名單
+
+值班每輪都呼叫 `CronCreate` / `CronList` / `CronDelete` / `PushNotification` / `ToolSearch`(Claude Code 內建工具,排程與推播用)。沒進白名單就每次跳「允許?」,人不在終端前時整輪卡死(Tim 端掃 50 份值班 transcript:CronCreate 152 次、ToolSearch 178 次,每次都在等人按)。這 5 個只建排程、發推播、查工具 schema,不寫檔、不對外發送、不執行任意程式。
+
+1. Read `~/.claude/settings.json`,看 `permissions.allow` 陣列(檔或陣列不存在 = 全缺);5 條都在 → ✅ 直接過
+2. 缺 → **先講一句再動手**:「我要把 5 個排程工具加進 Claude Code 白名單(改 `~/.claude/settings.json`),接下來會跳允許提示,請按允許。如果你在 **auto 模式**,AI 改這個檔會被分類器直接擋、不會給你按允許的機會,請先按 Shift+Tab 切到 default 再跟我說『繼續』」
+3. 用 Edit 把缺的條目補進 `permissions.allow`(**只補缺的、不動既有條目、不刪任何東西**;陣列或 `permissions` 物件不存在就建):
+   ```json
+   "CronCreate",
+   "CronList",
+   "CronDelete",
+   "PushNotification",
+   "ToolSearch",
+   ```
+4. 寫入被擋(auto 模式回 Self-Modification)或使用者不想讓 AI 碰 settings → **退手動,不重試、不繞**:印出上面 5 行,說明貼進 `permissions.allow` 陣列內任一位置即可;或請使用者打 `/permissions` → Allow 分頁逐條加
+5. 改完**必須重開 Claude Code session 才生效**。重開後打「檢查安裝進度」,精靈重讀檔驗 5 條都在才算過
+
+### 關卡 8:試跑
 
 先提醒使用者:值班是長時間自動任務,值班終端的模型**固定由 `config.model.session` 決定,預設 sonnet**(啟動器 bat 讀取;精靈不代改,使用者自己想換才跟秘書說「秘書用 <模型>」);不用 bat、手動 `claude` 啟動的人要自己帶 `--model sonnet`。Pro 方案另可用口令「省量模式」降低用量。
 
@@ -155,7 +173,7 @@ setx SLACK_USER_TOKEN "xoxp-你的token"
 
 ### 選配關卡:回報單掃描(Slack List)
 
-不在進度診斷 1-7 內、不擋裝機。時機:試跑通過後問一句「有沒有指派給你的 Slack List 回報單要一起盯?」,或使用者事後說「加回報單」「掃 List」時進入。**每一項都要問安裝者本人,不可沿用別人的設定值**:
+不在進度診斷 1-8 內、不擋裝機。時機:試跑通過後問一句「有沒有指派給你的 Slack List 回報單要一起盯?」,或使用者事後說「加回報單」「掃 List」時進入。**每一項都要問安裝者本人,不可沿用別人的設定值**:
 
 0. **團隊預設捷徑**:`~/.claude/skills/secretary/team-defaults.json` 存在(隨 repo 發佈,只含 ID 不含內部名稱)→ 列出裡面的 report_lists(用 `_list_name`)問「要不要啟用團隊預設回報單?」,要 → 整包抄進 config.report_lists(assignee_user_id 留空 = 本人),跳到步驟 3 驗 scope 後直接步驟 7 試撈,步驟 1-2、4-6 全免
 1. 問要不要啟用;**不要 → 寫 `report_lists: []` 跳過**
@@ -192,4 +210,4 @@ setx SLACK_USER_TOKEN "xoxp-你的token"
 
 - 一關驗證通過才給下一關;使用者跳著問也先跑診斷對齊現況
 - 同一關卡住兩次(操作照做仍失敗)→ 停止重試,整理錯誤訊息與已試步驟,請使用者找 Tim
-- 不碰使用者的既有 skills/settings,只寫 `skills/secretary/` 底下的檔案
+- 不碰使用者的既有 skills/settings,只寫 `skills/secretary/` 底下的檔案。**唯一例外**:關卡 7 補 `~/.claude/settings.json` 的 5 條排程工具白名單——只增不刪、先講再改、被擋就退手動
