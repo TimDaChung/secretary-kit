@@ -14,7 +14,7 @@
 - 安裝說明流程圖加第 8 步、疑難排解加「值班一直停在允許提示」一列
 - 精靈原則「不碰使用者 settings」加唯一例外(只增不刪、先講再改、被擋退手動)
 
-⚙️ **升級動作**:`git pull` 後秘書 Read `~/.claude/settings.json`,`permissions.allow` 缺上述任一條 → 照 secretary-setup 關卡 7 步驟 2–5 補(先講一句、使用者按允許;被擋就印 5 行請使用者自己貼或走 `/permissions`,**不重試不繞**);5 條都在則略過。改完提醒**重開 Claude Code session 才生效**。無新 scope、無額度增量
+⚙️ **升級動作**:`git pull` 後秘書 Read `~/.claude/settings.json`,`permissions.allow` 缺上述任一條 → 照 secretary-setup 關卡 7 步驟 2–5 補(先講一句、使用者按允許;被擋就印 5 行請使用者自己貼或走 `/permissions`(僅終端機版;桌面 app 改在權限模式選單切 Manual 後重跑),跑完寫回 `kit_version` 在 auto 模式同樣可能被擋,處置同上,**不重試不繞**);5 條都在則略過。改完提醒**重開 Claude Code session 才生效**。無新 scope、無額度增量
 
 ## v1.21.0 (2026-10-01)
 
