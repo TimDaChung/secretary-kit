@@ -146,7 +146,7 @@ setx SLACK_USER_TOKEN "xoxp-你的token"
 值班每輪都呼叫 `CronCreate` / `CronList` / `CronDelete` / `PushNotification` / `ToolSearch`(Claude Code 內建工具,排程與推播用)。沒進白名單就每次跳「允許?」,人不在終端前時整輪卡死(Tim 端掃 50 份值班 transcript:CronCreate 152 次、ToolSearch 178 次,每次都在等人按)。這 5 個只建排程、發推播、查工具 schema,不寫檔、不對外發送、不執行任意程式。
 
 1. Read `~/.claude/settings.json`,看 `permissions.allow` 陣列(檔或陣列不存在 = 全缺);5 條都在 → ✅ 直接過
-2. 缺 → **先講一句再動手**:「我要把 5 個排程工具加進 Claude Code 白名單(改 `~/.claude/settings.json`),接下來會跳允許提示,請按允許。如果你在 **auto 模式**,AI 改這個檔會被分類器直接擋、不會給你按允許的機會,請先按 Shift+Tab 切到 default 再跟我說『繼續』」
+2. 缺 → **先講一句再動手**:「我要把 5 個排程工具加進 Claude Code 白名單(改 `~/.claude/settings.json`),接下來會跳允許提示,請按允許。如果你在 **auto 模式**,AI 改這個檔會被分類器直接擋、不會給你按允許的機會,請先切到逐次詢問模式再跟我說『繼續』——終端機版按 Shift+Tab 切到 default;**桌面 app** 沒有 Shift+Tab,改點輸入框旁的權限模式選單選「Manual」(Always ask before making changes)。補完再切回 Auto」
 3. 用 Edit 把缺的條目補進 `permissions.allow`(**只補缺的、不動既有條目、不刪任何東西**;陣列或 `permissions` 物件不存在就建):
    ```json
    "CronCreate",
@@ -155,7 +155,7 @@ setx SLACK_USER_TOKEN "xoxp-你的token"
    "PushNotification",
    "ToolSearch",
    ```
-4. 寫入被擋(auto 模式回 Self-Modification)或使用者不想讓 AI 碰 settings → **退手動,不重試、不繞**:印出上面 5 行,說明貼進 `permissions.allow` 陣列內任一位置即可;或請使用者打 `/permissions` → Allow 分頁逐條加
+4. 寫入被擋(auto 模式回 Self-Modification)或使用者不想讓 AI 碰 settings → **退手動,不重試、不繞**:印出上面 5 行,說明貼進 `permissions.allow` 陣列內任一位置即可;或請使用者打 `/permissions` → Allow 分頁逐條加(僅終端機版;桌面 app 開不了這個對話框,改走步驟 2 的模式選單切 Manual 後讓精靈重跑)
 5. 改完**必須重開 Claude Code session 才生效**。重開後打「檢查安裝進度」,精靈重讀檔驗 5 條都在才算過
 
 ### 關卡 8:試跑

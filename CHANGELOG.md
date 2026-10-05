@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## v1.22.1 (2026-10-05)
+
+- **關卡 7 補桌面 app 的權限模式切法**(組員建議):原文只寫終端機版的 Shift+Tab 切 default 與 `/permissions` → Allow 分頁,桌面 app 兩個都找不到。補上「輸入框旁權限模式選單選 Manual(Always ask before making changes),改完切回 Auto」;`/permissions` 註明僅終端機版
+- **升級寫回 `kit_version` 也會被 auto 模式擋**:回報者實測 state.json 寫入同樣回 Self-Modification,原文只預料到 settings.json。`secretary` 升級規則 (a) 補同一套處置(先切逐次詢問模式、被擋不重試不繞)
+- `安裝說明.md` 疑難排解表同步
+
+⚙️ **升級動作**:`git pull` 即生效,無設定變更
+
 ## v1.22.0 (2026-10-02)
 
 - **安裝精靈新增關卡 7:Claude Code 權限白名單**(Tim 端回報):值班每輪都呼叫 `CronCreate` / `CronList` / `CronDelete` / `PushNotification` / `ToolSearch`,這 5 個內建工具沒進 `~/.claude/settings.json` 的 `permissions.allow` 就每次跳「允許?」,人不在終端前整輪卡死。掃 50 份值班 transcript 實測:CronCreate 152 次、ToolSearch 178 次。kit 從第一版到現在都沒教這一步,所有裝機者都在同一狀態。流程:精靈 Read 檔判定(不能用 ToolSearch,有無白名單都查得到)→ 先講一句再 Edit 補缺的條目 → 被擋(auto 模式分類器對 settings.json 自我修改一律拒絕,口頭授權無效,要先 Shift+Tab 切 default)就退手動印片段或 `/permissions` → 重開 session 才生效。原「試跑」改關卡 8
