@@ -1,5 +1,7 @@
+# v1.23.0 起個人資料改放 repo 外的 %USERPROFILE%\secretary-data\;以下舊條目保留給尚未遷移的機器,*.migrated 為遷移後改名的舊檔
 secretary/config.json
 secretary/state.json
 secretary/templates.md
 secretary/semantics.md
 secretary/state.json.bak*
+secretary/*.migrated

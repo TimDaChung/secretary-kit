@@ -18,7 +18,7 @@ description: 個人 Slack 秘書安裝精靈。引導使用者從零裝好自己
 
 第一個 ❌ 就是當前卡點,輸出 checklist 後直接進入對應教學(診斷編號與關卡編號不是同一套:診斷 1→關卡 1、2→關卡 2–3、3→關卡 4、4→關卡 5、5→回關卡 2/3 查 bot token 與 `im:write`、6→關卡 6、7→關卡 7、8→關卡 8):
 
-1. **技能檔案**:`~/.claude/skills/secretary/SKILL.md` 與 `config.json` 存在?
+1. **技能檔案**:`~/.claude/skills/secretary/SKILL.md` 存在、資料夾 `~/secretary-data/` 有 `config.json`?(資料夾定義見 secretary/SKILL.md〈資料夾〉;只有舊位置 `~/.claude/skills/secretary/config.json` 的 = v1.23.0 前裝機,先照 secretary/SKILL.md〈啟動前置〉第 0 步遷移再判定)
 2. **Bot token**:環境變數 `SLACK_BOT_TOKEN` 讀得到?`curl auth.test` 回 `ok:true`?(順手記下 bot 的 `user_id`)
 3. **Slack MCP**:ToolSearch 查 `mcp__claude_ai_Slack__slack_search_users` 可用?可用就搜自己名字驗證+記下自己的 user ID
 4. **Google Calendar MCP**(選配):ToolSearch 查 `mcp__claude_ai_Google_Calendar__list_calendars`;沒連只提醒「日曆功能停用」,不擋關
@@ -55,11 +55,13 @@ description: 個人 Slack 秘書安裝精靈。引導使用者從零裝好自己
      New-Item -ItemType Junction -Path "$env:USERPROFILE\.claude\skills\secretary" -Target "$env:USERPROFILE\secretary-kit\secretary"
      New-Item -ItemType Junction -Path "$env:USERPROFILE\.claude\skills\secretary-setup" -Target "$env:USERPROFILE\secretary-kit\secretary-setup"
      ```
-4. **首裝初始化**(在 `secretary\` 內複製,兩個個人檔都已 gitignore,不會被 pull 覆蓋):
-   - `templates.example.md` → 複製成 `templates.md`
-   - `config.example.json` → 複製成 `config.json`(內容由後續關卡問答式代填)
+4. **首裝初始化**:建資料夾 `~/secretary-data/`(Bash `mkdir -p "$USERPROFILE/secretary-data"`),再從 skill 目錄把範例複製進去(個人檔放 repo 外,不會被 pull 覆蓋;不放 skill 目錄是因為 `~/.claude` 是 Claude Code 受保護路徑,每次寫入都會跳確認):
+   - `templates.example.md` → 資料夾的 `templates.md`
+   - `semantics.example.md` → 資料夾的 `semantics.md`
+   - `config.example.json` → 資料夾的 `config.json`(內容由後續關卡問答式代填)
+   - `state.json` 不用建,秘書首輪掃描自己會寫
 
-**zip 備援**:沒有 git 也能裝——跟 Tim 要最新版 zip,解壓後把 `secretary/` 與 `secretary-setup/` 複製到 `~/.claude/skills/`,再做上面第 4 步;差別只在不能用「秘書升級」一鍵升級,更新要重新拿 zip。
+**zip 備援**:沒有 git 也能裝——跟 Tim 要最新版 zip,解壓後把 `secretary/` 與 `secretary-setup/` 複製到 `~/.claude/skills/`,再做上面第 4 步(資料夾一樣在 `~/secretary-data/`);差別只在不能用「秘書升級」一鍵升級,更新要重新拿 zip。
 
 ### 關卡 2:建立 Slack Bot 並拿 token
 
@@ -133,7 +135,7 @@ setx SLACK_USER_TOKEN "xoxp-你的token"
 同關卡 4,在 https://claude.ai/settings/connectors 連 **Google Calendar** 與 **Gmail**,登入公司 Google 帳號。跳過 Calendar → 行程提醒只吃手動備忘,不吃日曆;跳過 Gmail → 下班結算沒有「限時信」段,其餘照常。
 
 ### 關卡 6:填 config.json
-問答式逐項幫使用者填 `~/.claude/skills/secretary/config.json`(格式見 kit 內 `config.example.json`):
+問答式逐項幫使用者填資料夾的 `config.json`(即 `~/secretary-data/config.json`,Edit 時用展開後的絕對路徑;格式見 kit 內 `config.example.json`):
 - `user_id`:我用 Slack MCP 搜你名字直接填
 - `bot`:app ID / bot user ID(從 auth.test 拿)/ bot DM 頻道 ID(關卡 5 診斷時 conversations.open 拿到的)
 - `watchlist`:問「哪些頻道的訊息你一定要知道?」(建議 2-4 個,我幫查頻道 ID)
@@ -210,4 +212,4 @@ setx SLACK_USER_TOKEN "xoxp-你的token"
 
 - 一關驗證通過才給下一關;使用者跳著問也先跑診斷對齊現況
 - 同一關卡住兩次(操作照做仍失敗)→ 停止重試,整理錯誤訊息與已試步驟,請使用者找 Tim
-- 不碰使用者的既有 skills/settings,只寫 `skills/secretary/` 底下的檔案。**唯一例外**:關卡 7 補 `~/.claude/settings.json` 的 5 條排程工具白名單——只增不刪、先講再改、被擋就退手動
+- 不碰使用者的既有 skills/settings,只寫資料夾 `~/secretary-data/` 底下的檔案(junction 建立除外)。**唯一例外**:關卡 7 補 `~/.claude/settings.json` 的 5 條排程工具白名單——只增不刪、先講再改、被擋就退手動

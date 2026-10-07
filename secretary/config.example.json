@@ -1,5 +1,5 @@
 {
-  "_comment": "秘書 skill 個人設定範例。複製成同目錄 config.json 後填入自己的資料;所有 _comment 欄位僅為說明,可保留或刪除。ID 查法:Slack 個人檔案/頻道詳情最下方的 Member ID / Channel ID。",
+  "_comment": "秘書 skill 個人設定範例。複製到資料夾 ~/secretary-data/config.json 後填入自己的資料;所有 _comment 欄位僅為說明,可保留或刪除。ID 查法:Slack 個人檔案/頻道詳情最下方的 Member ID / Channel ID。",
   "user": {
     "_comment": "必填。user_id = 你的 Slack Member ID(U 開頭);name = 顯示名(自動回覆與報告會用到)。",
     "user_id": "U00000000",

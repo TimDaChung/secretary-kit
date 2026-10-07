@@ -1,5 +1,17 @@
 # CHANGELOG
 
+## v1.23.0 (2026-10-07)
+
+- **個人資料搬出 `~/.claude`,改放 `~/secretary-data/`**(Tim 端回報):Claude Code 把 `~/.claude` 列為受保護路徑,Edit/Write 寫進去一律跳提示或交給 auto 模式分類器審,`permissions.allow` 與 PreToolUse hook 都蓋不過(官方文件 permission-modes / permissions 兩頁)。秘書每輪都寫 `~/.claude/skills/secretary/state.json`,2026-10-07 Tim 端「上班」重設 `session_first_scan_done` / `duty_started` 時被擋下,值班卡在確認提示。kit 從第一版起個人檔就放 skill 目錄,所有裝機者都在同一狀態,只是先前沒被攔
+- **資料夾**:`%USERPROFILE%\secretary-data\`,放 `config.json`、`state.json`、`templates.md`、`semantics.md`、`state.json.bak-*`;skill 目錄只留 kit 版控檔(`SKILL.md`、`daily.md`、`team-defaults.json`、`*.example.*`),執行中不寫入。路徑只在 SKILL.md 檔頭〈資料夾〉定義一次,其餘一律寫「資料夾的 X」
+- **啟動自動遷移**(SKILL.md〈啟動前置〉第 0 步,冪等):逐檔檢查,資料夾沒有、舊位置有 → Bash `cp` 複製 → JSON 驗證 → 舊檔改名 `.migrated`(被擋就保留並提示可手動刪)→ 一句話告知;資料夾已有的檔不覆蓋。`.gitignore` 加 `secretary/*.migrated`,改名後的舊檔不會讓「秘書升級」的髒污檢查誤判
+- **`secretary-start.bat`**:config 改讀 `%USERPROFILE%\secretary-data\config.json`,新位置沒有檔才退回舊位置(未遷移的機器),都沒有/壞檔/沒設 → sonnet;Get-Content 加 `-ErrorAction Stop`,找不到檔時不再在視窗印紅字。實測 5 情境:新位置有(含 BOM)、只有舊位置、都沒有、新位置壞檔、新位置缺 model 區塊,皆正確
+- **安裝精靈**:首裝改為建資料夾並把 `templates` / `semantics` / `config` 範例複製進去;關卡 6 寫資料夾的 `config.json`;診斷 1 遇到只有舊位置的 config 先遷移再判定
+- README、安裝說明、功能說明、`config.example.json` 註解同步改寫存放位置
+- v1.22.1「升級寫回 `kit_version` 被 auto 擋要先切模式」的處置隨本版失效:`state.json` 已在 `~/.claude` 外,寫入不再被擋;SKILL.md 升級規則 (a) 那段已拿掉(settings.json 的處置不變)
+
+⚙️ **升級動作**:`git pull` 後秘書執行一次遷移(冪等):資料夾已有 `state.json` 與 `config.json` → 略過;否則照 SKILL.md〈啟動前置〉第 0 步搬檔,完成後把 `kit_version` 寫進**資料夾的** `state.json`。遷移只用 Bash 複製與改名,不會跳受保護路徑的提示;舊檔改名被擋時保留舊檔、告知可手動刪。**桌面(或開機啟動資料夾)的 `secretary-start.bat` 要更新成新版**——升級後檢查會比對內容並問你要不要代複製,答「要」即可;不更新的話舊 bat 仍讀舊位置,遷移後讀不到 config 會一律用 sonnet。無新 scope、無額度增量
+
 ## v1.22.1 (2026-10-05)
 
 - **關卡 7 補桌面 app 的權限模式切法**(組員建議):原文只寫終端機版的 Shift+Tab 切 default 與 `/permissions` → Allow 分頁,桌面 app 兩個都找不到。補上「輸入框旁權限模式選單選 Manual(Always ask before making changes),改完切回 Auto」;`/permissions` 註明僅終端機版
