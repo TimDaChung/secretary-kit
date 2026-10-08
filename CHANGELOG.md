@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## v1.24.0 (2026-10-08)
+
+- **回報單掃描改用 kit 附腳本,不再落檔與 `rm`**(Tim 端回報):v1.20.x 起回報單翻頁結果寫進 `$TEMP`,規則要求「處理完立即刪除」,agent 便用 `rm -f` 刪檔;新手包的 `permissions.ask` 有 `Bash(rm *)`,ask 優先於 allow,每次開工包／結算掃回報單都跳權限提示,無人值守時整輪卡死。2026-10-08 開工包兩支 `rm -f` 各卡一次,第一次卡 19 分鐘
+- **新增 `secretary/scripts/report_lists.py`**(只用標準函式庫):讀資料夾的 `config.json` 的 `report_lists[]`,在記憶體內做 files.info(status label 對照)＋翻頁＋指派篩選,stdout 印 JSON;全程不寫檔。token 讀 `SLACK_USER_TOKEN`,Windows 讀不到再查使用者層環境變數。實測:401 筆全抓、label 對照正確、執行前後 `$TEMP` 無殘留;另開乾淨 agent 照新版 daily.md 走一輪,只跑腳本一條指令、未跳提示
+- `daily.md` 回報單第 1、2、4 步改寫為呼叫腳本;結算 state 清理拿掉「刪 skill 目錄 `tmp_*.json`」一項(同樣要 `rm`)
+- `SKILL.md` 鐵則加「絕不刪檔」:需落檔的(如 bot DM JSON)用固定檔名覆寫
+
+⚙️ **升級動作**:`git pull` 即生效,無設定變更、無新 scope
+
 ## v1.23.0 (2026-10-07)
 
 - **個人資料搬出 `~/.claude`,改放 `~/secretary-data/`**(Tim 端回報):Claude Code 把 `~/.claude` 列為受保護路徑,Edit/Write 寫進去一律跳提示或交給 auto 模式分類器審,`permissions.allow` 與 PreToolUse hook 都蓋不過(官方文件 permission-modes / permissions 兩頁)。秘書每輪都寫 `~/.claude/skills/secretary/state.json`,2026-10-07 Tim 端「上班」重設 `session_first_scan_done` / `duty_started` 時被擋下,值班卡在確認提示。kit 從第一版起個人檔就放 skill 目錄,所有裝機者都在同一狀態,只是先前沒被攔

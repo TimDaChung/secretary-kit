@@ -34,12 +34,10 @@ bot 完整清單+隔夜變化+今日行程。**今日行程 = notes 今天的 �
 
 **跨日重開提醒(結算時查)**:`state.json duty_started`(SKILL.md〈排程核對〉:「上班/onduty」啟動當下寫入,cron 輪不改)早於今天 → 結算 DM 加一行「♻️ 這條值班對話已連跑 N 天,建議下班把終端視窗關掉,明天開機自啟全新 session(待辦/備忘都存檔案,不會丟)」。理由:對話越長,每輪掃描重讀的歷史越大(實測跨 2 天的 session 每請求重讀量翻倍)。當天啟動的 session 不提醒。
 
-**state 清理(結算時做,不進 DM)**,四項:
+**state 清理(結算時做,不進 DM)**,三項(**不刪任何檔**——`rm` 在 ask 清單會卡權限提示):
 1. `dismissed[]` 中訊息時間超過 14 天的項目移除——id 格式 `<channel_id>:<message_ts>`,直接用 ts 判齡;掃描起點上限 7 天前,這些 id 永遠不可能再被比對到,留著只是每輪陪讀陪寫。`dismissed_patterns[]`(文字黑名單)**不清**,那是永久偏好
 2. `notes[]`:`date` 已過的事件型備忘移除(當天與未來的留;寫日期區間的以區間末日判);**任何內容是輪次紀錄/掃描過程/狀態確認的 note 一律移除**——它們本來就不該存在(SKILL.md〈個人備忘〉明禁)
 3. `watched_threads[]` 與 `observed_threads[]` 的 `summary` 超過 80 字 → **改寫**成 ≤80 字一句話(保留能認出這串的人名與主題,不是硬截斷)
-4. skill 目錄若殘留 `tmp_*.json` 暫存檔 → 刪除(正常流程不該留下,見下方回報單掃描第 2 步)
-
 **整合健檢(結算尾段,一項一行)**:檢查五條整合——Slack MCP(必備)、bot token(`auth.test`)、user token 及其 scopes(`users.profile:write`/`reactions:write`/`reactions:read`,另 report_lists 有啟用時查 `lists:read`+`files:read`;看 auth.test 回應標頭)、Calendar MCP、Gmail MCP。缺的列「⚙️ 未串:<項目>(<失效的功能>)——要裝打『檢查安裝進度』,不想用回『<項目> 不用了』」;使用者回「X 不用了」→ 寫入 `config.disabled_integrations[]`,之後不再提醒。**故意關的不提醒**:bot 三欄全空、auto_reply 開關 false、已列入 disabled_integrations 的一律跳過;全部健康 → 這段不出現。
 
 ## Slack List 回報單掃描(report_lists,骨架 ③.5)
@@ -50,13 +48,14 @@ bot 完整清單+隔夜變化+今日行程。**今日行程 = notes 今天的 �
 
 資料來源:Slack Web API,非 MCP。token 讀 `$SLACK_USER_TOKEN`(讀不到用 `[Environment]::GetEnvironmentVariable("SLACK_USER_TOKEN","User")`);都沒有 → 整段靜默跳過,不報錯。需該 token 具 `lists:read` + `files:read` scope(缺 → API 回 missing_scope,靜默跳過並在整合健檢提示一次)。
 
-每個 report_lists 項的處理(Bash curl):
-1. 取欄位對照:GET `files.info?file=<list_id>`,從 `file.list_metadata.schema` 建 status_col 的 option value → label 對照表
-2. 翻頁取全部項目:GET `slackLists.items.list?list_id=<list_id>&limit=100`,用 `response_metadata.next_cursor` 續頁(`&cursor=<urlencoded>`)直到無 cursor(上限 ~50 頁)。**回應需落檔時一律寫系統暫存目錄**(Bash `$TEMP`,檔名帶 list_id 與頁碼),該 list 處理完**立即刪除**;**禁止寫在 skill 目錄**(2026-09-30 組員回報:skill 目錄累積 9 個 `tmp_items_page*.json` 共 1.6MB 無人清)
+1. 抓取一律跑 kit 附的腳本,**一條指令、不自己拼 curl**:`python ~/.claude/skills/secretary/scripts/report_lists.py`
+   - 腳本在記憶體內做完 files.info(status 選項 value → label)、翻頁(上限 50 頁)、指派篩選(規則見第 4 步),stdout 印 `{<list_id>: {ok, total, items:[{id, name, status}]}}`(`status` 已是 label)
+   - 印 `{"skipped": ...}`(無 token)→ 整段靜默跳過;某 list `ok:false` → 該 list 靜默跳過,`error` 含 missing_scope 時在整合健檢提示一次
+2. **禁止落檔、禁止 `rm`**:不寫任何暫存檔(skill 目錄、`$TEMP` 都不行),就沒有東西要刪。`rm` 在新手包的 ask 清單,刪檔一定跳權限提示,無人值守時整輪卡死(2026-10-08 開工包兩支 `rm -f` 各卡一次,第一次 19 分鐘;更早 2026-09-30 是暫存檔寫在 skill 目錄累積 1.6MB 無人清)。腳本壞了就回報異常,**不要退回手拼 curl＋暫存檔**
 3. **存快照(篩狀態之前做)**:把**所有指派給本人的** item 記成 `{item_id: {status, name}}`——**不套 `exclude_status`**。理由:若只存篩後結果,單子一變「完成」就從快照消失,無法分辨「做完了」還是「改指派給別人了」
-4. 篩選(每個 item 的 `fields[]` 依 `column_id` 取值):
-   - 指派:assignee_col 那格的 `user[]` 含「本人 ID」→ 留。本人 ID = report_lists 項的 `assignee_user_id`,**空則用 `config.user.user_id`(每人 config 都是自己,不寫死任何人)**。**多欄指派**:config 也可給 `assignee_cols`(陣列,如受託人+pm 兩欄)取代 `assignee_col`,任一欄含本人即留
-   - 狀態:status_col 那格的 `select[0]` 經對照表轉 label,label ∈ `exclude_status` → 丟
+4. 篩選:
+   - 指派(腳本已做,`items` 全是本人的):assignee_col 那格的 `user[]` 含「本人 ID」→ 留。本人 ID = report_lists 項的 `assignee_user_id`,**空則用 `config.user.user_id`(每人 config 都是自己,不寫死任何人)**。**多欄指派**:config 也可給 `assignee_cols`(陣列,如受託人+pm 兩欄)取代 `assignee_col`,任一欄含本人即留
+   - 狀態:item 的 `status` ∈ `exclude_status` → 丟
 5. **與上次比對**(`state.json report_snapshots[<list_id>]`;該 list 無舊快照 = 首次啟用 → 全部不標記,只存快照)。`config.report_lists[].track_changes: false` 可關掉本步驟。`quiet_status[]`(選填,預設空)= 轉入這些狀態時不發通知:
    - 舊快照沒有這個 item_id → **🆕 新指派給你**
    - status 變了 → **🔄 `<舊狀態>` → `<新狀態>`**
