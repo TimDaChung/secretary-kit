@@ -274,6 +274,13 @@ bot 識別:app `config.bot.app_id`,bot user `config.bot.bot_user_id`,DM 頻道 `
 4. **發送**:`update_event` 用 `addedAttendees`(每人 `{email, displayName}`),`notificationLevel` 留預設 `ALL`(Google 自動寄邀請信);事件尚未建檔(口令先到)→ `create_event` 直接帶 `attendees`,此情況**不得**沿用建檔規則的 `notificationLevel: NONE`
 5. bot DM 回報「📅 已邀請:<名單>」;有推測 email 的另列「待確認:C(c@…,推測)——回『發』才邀」。解析不到又湊不出的(外部人員等)列出請使用者直接給 email
 
+## 會前提醒(cron 觸發)
+
+會前 15 分一次性 cron 的 prompt 一律寫「/secretary 會前提醒:<行程>(<開始>-<結束>,<地點>)」——**必帶 `/secretary` 前綴**:cron 觸發時主 session 沒載入本 skill,裸文字「bot 提醒使用者:…」只會被當成一句話印在終端機,不會發 DM(2026-09-22～10-08 四次會前提醒全數如此,零工具呼叫,使用者一次都沒收到)。收到此口令:
+
+1. 照〈發送機制〉以 bot 發 DM:「⏰ 15 分鐘後:<行程>(<開始>-<結束>,<地點>)」;撞期資訊有則附上
+2. 不派 agent、不掃描、不寫 state;發完讀回 `chat.postMessage` 的 `ok`,失敗 → 改用 Slack MCP self-DM 補發並在終端標明失敗原因
+
 ## 會議狀態自動切換(需 user token)
 
 排會前提醒時,同一行程加排「會議開始」一次性 cron,prompt「/secretary 切會議狀態:<行程> 至 <結束時間>」:
